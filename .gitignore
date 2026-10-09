@@ -10,7 +10,7 @@
 
 # Asset meta data should not be ignored
 !/[Aa]ssets/**/*.meta
-
+!/[Aa]ssets/**.meta
 # Visual Studio / Rider cache
 .vs/
 .idea/
@@ -48,6 +48,9 @@ crashlytics-build.properties
 
 # Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+
+# Art assets (source files, not tracked)
+/[Aa]ssets/[Aa]rts/
 
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta

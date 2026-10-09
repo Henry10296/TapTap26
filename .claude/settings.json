@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); case \"$input\" in *active_task.md*) : ;; *) mkdir -p .claude/tasks && date +%s%N > .claude/tasks/.dirty ;; esac"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .claude/tasks/.dirty ]; then if [ ! -f .claude/tasks/active_task.md ] || [ .claude/tasks/.dirty -nt .claude/tasks/active_task.md ]; then echo '本会话有文件改动未回写 .claude/tasks/active_task.md：请先更新 Status / 本轮证据链 / Next Steps，再结束。' >&2; exit 2; fi; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

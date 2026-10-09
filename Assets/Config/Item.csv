@@ -1,0 +1,5 @@
+﻿id,name,type,price,weight,canStack,desc,tags,dropIds
+1001,红药水,1,50,0.5,true,"恢复 50 点生命值, 持续 3 秒",consumable;hp,1001;1002;1003
+1002,蓝药水,1,50,0.5,true,恢复 20 点法力值,consumable;mp,1001;1002
+1003,金戒指,2,888,0.05,false,"攻击力 +5，「稀有」品质",equip;ring,
+1004,神秘卷轴,3,,1,TRUE,上古文字,,

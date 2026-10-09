@@ -1,0 +1,46 @@
+{
+  "1001": {
+    "id": 1001,
+    "name": "红药水",
+    "type": 1,
+    "price": 50,
+    "weight": 0.5,
+    "canStack": true,
+    "desc": "恢复 50 点生命值, 持续 3 秒",
+    "tags": ["consumable","hp"],
+    "dropIds": [1001,1002,1003]
+  },
+  "1002": {
+    "id": 1002,
+    "name": "蓝药水",
+    "type": 1,
+    "price": 50,
+    "weight": 0.5,
+    "canStack": true,
+    "desc": "恢复 20 点法力值",
+    "tags": ["consumable","mp"],
+    "dropIds": [1001,1002]
+  },
+  "1003": {
+    "id": 1003,
+    "name": "金戒指",
+    "type": 2,
+    "price": 888,
+    "weight": 0.05,
+    "canStack": false,
+    "desc": "攻击力 +5，「稀有」品质",
+    "tags": ["equip","ring"],
+    "dropIds": null
+  },
+  "1004": {
+    "id": 1004,
+    "name": "神秘卷轴",
+    "type": 3,
+    "price": null,
+    "weight": 1,
+    "canStack": true,
+    "desc": "上古文字",
+    "tags": null,
+    "dropIds": null
+  }
+}
