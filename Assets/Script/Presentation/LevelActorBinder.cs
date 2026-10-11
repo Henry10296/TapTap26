@@ -14,6 +14,7 @@ namespace TapCom.Presentation
         [SerializeField] private CellActor _cellActorPrefab;
 
         private readonly List<CellActor> _actors = new List<CellActor>();
+        private readonly Dictionary<Vector3Int, CellActor> _actorByPos = new Dictionary<Vector3Int, CellActor>();
 
         private void OnEnable()
         {
@@ -39,8 +40,25 @@ namespace TapCom.Presentation
                 var actor = Instantiate(_cellActorPrefab, transform);
                 actor.Bind(cell);
                 _actors.Add(actor);
+                _actorByPos[cell.Position] = actor;
             }
             Debug.Log($"[LevelActorBinder] bound {_actors.Count} actors for '{e.WorldId}'");
+        }
+
+        /// <summary>
+        /// 取走指定格子的表现本体（解锁转运动视图时由 CircuitView 调用）：
+        /// 本体跟随数据飞行，不销毁重建（GDD「数据与图片一起更新」）。取走后不再归本类清理。
+        /// </summary>
+        public bool TryTake(Vector3Int pos, out CellActor actor)
+        {
+            if (_actorByPos.TryGetValue(pos, out actor) && actor != null)
+            {
+                _actorByPos.Remove(pos);
+                _actors.Remove(actor);
+                return true;
+            }
+            actor = null;
+            return false;
         }
 
         /// <summary>清理自己名下的表现物（不销毁数据，不碰别人对象）。</summary>
@@ -51,6 +69,7 @@ namespace TapCom.Presentation
                 if (actor != null) Destroy(actor.gameObject);
             }
             _actors.Clear();
+            _actorByPos.Clear();
         }
     }
 }

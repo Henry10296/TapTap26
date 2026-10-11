@@ -11,6 +11,9 @@ namespace TapCom.MagicCircuit
         public Vector2 Position;
         public Vector2 Velocity;
         public SeedMagicType Type;
+
+        /// <summary>贴合点被占的诊断日志只打一次（防 120Hz 刷屏）。</summary>
+        public bool SnapBlockedLogged;
     }
 
     /// <summary>解锁运动格（已出字典；落定/加固再 AddCell 回字典——Invariant：字典内格恒 Locked）。
@@ -168,6 +171,7 @@ namespace TapCom.MagicCircuit
             foreach (var cell in world.Cells)
             {
                 if (field.Settled.Contains(cell.Position)) continue;
+                if (cell.Frozen) continue; // 始终固定：免疫吸引捕获
                 if ((CellCenter(cell.Position) - field.Center).sqrMagnitude > field.Radius * field.Radius) continue;
                 _snapshotBuffer.Add(cell);
             }
@@ -175,6 +179,7 @@ namespace TapCom.MagicCircuit
             for (var i = 0; i < _snapshotBuffer.Count; i++)
             {
                 var cell = _snapshotBuffer[i];
+                Debug.Log($"[MagicCircuit] attract field captures ({cell.Position.x},{cell.Position.y})（引力场捕获：场内存活期落定即吸走）");
                 Unlock(world, cell.Position, cell.MagicAttr, Vector2.zero, attracted: true);
             }
         }
@@ -197,7 +202,16 @@ namespace TapCom.MagicCircuit
 
                 if (!r.Hit) continue;
                 var target = SnapTarget(r);
-                if (world.IsOccupied(target)) continue; // 贴合面被占：轴向速度已清零，滑停重试（原型反弹的 M1 简化）
+                if (world.IsOccupied(target))
+                {
+                    // 贴合面被占：轴向速度已清零，滑停重试（原型反弹的 M1 简化）；诊断日志每种子一次
+                    if (!seed.SnapBlockedLogged)
+                    {
+                        seed.SnapBlockedLogged = true;
+                        Debug.Log($"[MagicCircuit] seed snap blocked: 贴合点 {target} 被占，种子滑停等待（at {seed.Position}）");
+                    }
+                    continue;
+                }
 
                 world.AddCell(target, CellType.Rock, CellGravityAttr.Dynamic, SeedAttr(seed.Type), locked: true);
                 PublishChanged(CellChangeType.Added, target, SeedAttr(seed.Type));
@@ -385,7 +399,7 @@ namespace TapCom.MagicCircuit
                 }
                 Debug.Log($"[MagicCircuit] cast blast：三块消失，弹飞 {_snapshotBuffer.Count} 格（r={MagicParams.BlastRadius}格）");
             }
-            else
+            else if (spell == SpellType.Attract)
             {
                 var field = new MagicField { Type = SpellType.Attract, Center = center, Radius = MagicParams.AttractRadius, Remaining = MagicParams.FieldDuration };
                 foreach (var pos in tri) field.Settled.Add(pos);
@@ -399,6 +413,28 @@ namespace TapCom.MagicCircuit
                 foreach (var cell in _snapshotBuffer) Unlock(world, cell.Position, cell.MagicAttr, Vector2.zero, attracted: true);
                 _fields.Add(field);
                 Debug.Log($"[MagicCircuit] cast attract：锚团 {tri.Length} 块，捕获 {_snapshotBuffer.Count} 格（r={MagicParams.AttractRadius}格 {MagicParams.FieldDuration}s）");
+
+                // GDD 引力配方：三块不销毁、消除颜色（转为岩石方块），保留作吸附锚团
+                foreach (var pos in tri)
+                {
+                    if (!world.TryGetCell(pos, out var cell)) continue;
+                    cell.MagicAttr = CellMagicAttr.None;
+                    PublishChanged(CellChangeType.Changed, pos, cell.MagicAttr);
+                }
+            }
+            else if (spell == SpellType.Static)
+            {
+                // GDD 静止配方：变化直径内格子「始终固定」（永久免疫解锁），三块不销毁不转色
+                _snapshotBuffer.Clear();
+                foreach (var cell in world.Cells)
+                    if ((CellCenter(cell.Position) - center).sqrMagnitude <= MagicParams.StaticRadius * MagicParams.StaticRadius)
+                        _snapshotBuffer.Add(cell);
+                foreach (var cell in _snapshotBuffer)
+                {
+                    cell.Frozen = true;
+                    PublishChanged(CellChangeType.Changed, cell.Position, cell.MagicAttr);
+                }
+                Debug.Log($"[MagicCircuit] cast static：固定 {_snapshotBuffer.Count} 格（r={MagicParams.StaticRadius}格）");
             }
         }
 
@@ -433,6 +469,11 @@ namespace TapCom.MagicCircuit
         private void RemoveDictCell(WorldGrid world, Vector3Int pos)
         {
             if (!world.TryGetCell(pos, out var cell)) return;
+            if (cell.Frozen)
+            {
+                Debug.Log($"[MagicCircuit] cell frozen, remove ignored ({pos.x},{pos.y})");
+                return;
+            }
             var attr = cell.MagicAttr;
             world.RemoveCell(pos);
             PublishChanged(CellChangeType.Removed, pos, attr);
