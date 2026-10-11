@@ -512,3 +512,53 @@ Core 运行框架：GameManager（GameState 状态机 + Service 容器）、Tick
 1. 用户聚焦 Unity → 编译（多线共享）。
 2. 按上面 7 步搭场景 + 配资产 → Play 验收闭环。
 3. 验收过 → M3 胜负判定接 Reload/Advance 触发源。
+
+### TASK-012 v2（2026-10-11 用户发 GDD 四配方规格表 + 「本体绑定不分离」指令）
+
+- **GDD 规格（用户截图，成为配方基准）**：虚空=蓝蓝红（消失直径5+失重直径5/持续5s）、**静止=蓝蓝黄（直径5内永久固定，新配方）**、爆炸=红蓝黄（直径7，三块销毁）、引力=红红黄（直径9，三块**变岩石保留**）。字段语义自证：引力「变为岩石方块」↔「消除颜色 true」→ 按 true/false 字面执行，括号「转化为岩石方块」在销毁 true 的配方里系模板误贴
+- **落盘 6 文件**：GameEvents（SpellType+Static、CellChangeType+Changed、CellWorldChangedEvent+MoverId）；Cell（+Frozen=始终固定免疫解锁）；MagicParams（Zero 2.5/Blast 3.5/Attract 4.5/Static 2.5，GDD 直径换算半径）；RecipeTable（+2蓝1黄=Static）；MagicCircuitSimulator（MovingCell+Id 全期唯一、Unlock 分配 Id+Frozen 免疫、RemoveDictCell Frozen 免疫、CaptureIntoAttraction 跳 Frozen、引力三块 attr→None+Changed、Cast static 新分支、PublishChanged+moverId）；CircuitView（**本体绑定**：Removed(MoverId≠0) 时 CellActor 转入 _moverActors 跟随飞行不换皮、SyncMovers 按 Id 对账自动清理落定/出界本体、Changed 分支重新 Bind 换贴图、删 AttrSprite）｜已核验（Write/Edit 成功；**未编译**）
+- **本体绑定语义（用户「静止结构和本体绑定，不要分离」）**：格子静止=CellActor（贴图+进 composite 有碰撞）；解锁时**同一 actor** 脱离 composite 层级跟随飞行（贴图不变、飞行中无碰撞——Used By Composite 无宿主即失效，与数据层 Locked 才有物理约束一致）；落定=Added 新静止 actor（旧本体 Id 对账销毁），同帧同位同贴图视觉无缝
+- 视觉挂账：静止魔法「始终固定版 sprite」（需美术双版本资产）、爆炸 vfx、四配方音效——资产人工做，代码入口后置
+- 悬念销案：CircuitView 已由用户挂上（grace/snap 日志出现=Start 订阅成功）；Square.prefab 贴图槽 Rock/Yellow、相机 Orthographic 两配置待用户确认完成
+- 2026-10-11｜**GDD 四配方运行时自证全绿**（用户贴日志）：引力触发+半径4.5+捕获9格 ✓、MoverId 全链（unlocked id=N → re-attached id=N）✓、引力场持续捕获新落格（landed→立即 CaptureIntoAttraction unlocked id=10→吸至锚团）✓ 设计内、爆炸半径3.5 只炸约7格 ✓
+- 2026-10-11｜**「爆炸后岩石不能附着格子」诊断**：最强嫌疑=引力场 5s 存活期持续捕获，种子落格即被吸走（上轮日志已实证该行为）。用户指令「你来加日志」→ 落 3 处诊断：①CaptureIntoAttraction 捕获时打 `attract field captures (x,y)`（区分捕获来源）②SeedProjectile+SnapBlockedLogged，StepSeeds 贴合点被占打一次 `seed snap blocked`（防 120Hz 刷屏）③种子出界已有 lost 日志。判读表：landed 后跟 captures=引力场吸走（等 5s 过期/离场）；snap blocked 刷屏=贴合点被占 bug；无日志掉出界=结构被炸空｜已核验（Edit 成功；待复编译复现）
+- 2026-10-11｜**诊断日志回收：附着系统正常，无 bug**——复现日志：Static 首战固定 10 格 ✓；Frozen 免疫挡下 Zero×2（remove ignored ×20）+Blast（unlock ignored ×10）✓；爆炸后种子 `seed landed (-8,-14)/(-9,-14)` 正常落定；全程零 snap blocked、零 attract captures。「不能附着」真相=玩家连锁 Static+Zero×2+Blast 清空 42 格结构，固定格孤岛周边无结构可贴（掉出界）——非 bug。平衡观察挂 M2（无限种子+随机三色连锁清场过快）
+- 2026-10-11｜**用户澄清真 bug：「岩石的物体还在」——本体绑定漏了初始格分支（已修）**：初始格 actor 归 LevelActorBinder 名下，CircuitView.Removed 只查自己 _cellViews → 初始格被解锁时查无 → return → 数据飞走而 binder 贴图滞留原地（双影：原地孤儿+兜底副本飞行）。修复：LevelActorBinder 加 `_actorByPos` 字典 + `TryTake(pos, out actor)`（取走=脱离 binder 清理责任）；CircuitView Removed 分支——动态格照旧、初始格 `_binder.TryTake` 转运动视图（_binder=FindFirstObjectByType 缓存）。语义=GDD「数据与图片一起更新」（弹飞时本体跟随）｜已核验（Edit 成功；待复编译验证爆炸后无滞留贴图）
+
+---
+
+## Task ID: TASK-013-音频模块（骨架 + mock 后端）
+
+**Status: DESIGN（Design 已落盘待用户审；审过才 Coding）**
+
+## 目标
+
+用户指令（2026-10-11）：「做音频系统，我们使用 wise（Wwise），用事件来通知播放，先做这个模块」。Intake 三拍板（AskUser 全选推荐项）：① 骨架先行 + mock 后端（Wwise 装好后只补真实后端）② 订阅现有游戏事件（逻辑层零改动）③ 范围 = 骨架 + 投掷/施法/游戏状态三类接点。
+
+## Design
+
+`docs/design/TASK-013-audio-design.md`（变量注册表 + 3 订阅契约 + IAudioBackend 单方法接口 + AudioCatalog 六声音 ID + Invariants 4 条 + 验收 7 项 + 拆解 4 步）。要点：
+- 新目录 `Script/Presentation/Audio/`，namespace `TapCom.Presentation`；AudioManager 纯 C# class（对齐 MagicCircuitSimulator 惯例，不占 TickManager）
+- 声音 ID 对齐 Wwise Event 命名（Play_Throw / Play_Spell_* / Music_Title / Music_Game），将来 Wwise 工程 Event 同名透传零改
+- 唯一新增 public 接口 = `IAudioBackend.Play(string)`；换 Wwise = 新实现类 + 装配行换一词
+- 非目标：不装 Wwise、不接 CellWorldChangedEvent、不做 CSV 音频表、不产任何资产（全部记 OQ/另任务）
+
+## 本轮证据链（2026-10-11）
+
+- Wwise 未集成：manifest.json 无 Audiokinetic 包 + 全项目 Glob Ak*/Wwise 零命中｜已核验（实读 + Glob）
+- 事件接点实证：SeedThrownEvent=PlayerThrower.cs:69、SpellCastEvent=MagicCircuitSimulator.cs:372、GameStateChangedEvent=GameManager.cs:82（拒绝路径不 Publish，:74-77）｜已核验（grep 五处 Publish）
+- EventBus 形态：实例 class、Subscribe/Unsubscribe 多播快照遍历、随 Play 轮次重建无需退订（EventBus.cs:10 注释 + :17-49 实读）；Services 门面 Container/EventBus（Services.cs 实读）；装配点 CoreDriver.Awake（CoreBootstrap.cs:39-68 实读）
+- **并行线活动实证**：CellWorldChangedEvent.MoverId 字段在本会话两次读取之间被并行线加进 GameEvents.cs:70（首次读无、grep 有）——并行会话活跃，Coding 前须实时 grep 事件定义再写；本任务订阅的 3 事件只读既有字段不受影响｜已核验（两次实读对照）；active_task.md 本轮两次 Edit 均遇并行写入需重读后追加（同证）
+
+## Open Questions
+
+- CellWorldChangedEvent（落格/消失声）是否接（高频声源未拍板）；Victory/Defeat/Paused 状态音 M3 后接
+- Wwise 集成包版本与安装（用户人工）→ 真实 WwiseAudioBackend 另任务
+- CSV 音频表另任务（AudioCatalog 即未来表雏形）
+
+## Next Steps
+
+1. 用户审 Design → 拍板后 Coding（2 新文件 + CoreBootstrap +2 行）。
+2. 编译 + §5 验收 7 项（mock 日志自证，可与多线共享编译）。
+
+---

@@ -24,10 +24,12 @@ namespace TapCom.Presentation
         [SerializeField] private Sprite _yellowSprite;
 
         private readonly Dictionary<Vector3Int, CellActor> _cellViews = new Dictionary<Vector3Int, CellActor>();
+        private readonly Dictionary<int, CellActor> _moverActors = new Dictionary<int, CellActor>(); // 运动格本体：同一 CellActor 从静止视图转入运动视图（不换皮）
         private readonly List<GameObject> _seedViews = new List<GameObject>();
-        private readonly List<GameObject> _moverViews = new List<GameObject>();
         private readonly Dictionary<Vector3Int, GameObject> _chargeViews = new Dictionary<Vector3Int, GameObject>();
+        private readonly HashSet<int> _staleIds = new HashSet<int>();
         private MagicCircuitSimulator _simulator;
+        private LevelActorBinder _binder;
         private Sprite _square;
         private bool _prefabWarned;
         private bool _spriteWarned;
@@ -39,6 +41,8 @@ namespace TapCom.Presentation
 
             if (Services.Container.TryGet(out MagicCircuitSimulator simulator)) _simulator = simulator;
             else Debug.LogWarning("[CircuitView] 模拟器未注册（Core 未装配 MagicCircuitSimulator）", this);
+
+            _binder = FindFirstObjectByType<LevelActorBinder>();
 
             // 初始关卡表现归 LevelActorBinder（LevelLoadedEvent 驱动）；本类只管模拟器动态增删的格子，防双渲染
             Services.EventBus.Subscribe<CellWorldChangedEvent>(OnCellChanged);
@@ -57,20 +61,49 @@ namespace TapCom.Presentation
         {
             foreach (var view in _cellViews.Values) Destroy(view.gameObject);
             _cellViews.Clear();
+            foreach (var view in _moverActors.Values) Destroy(view.gameObject);
+            _moverActors.Clear();
             foreach (var view in _chargeViews.Values) Destroy(view);
             _chargeViews.Clear();
         }
 
         private void OnCellChanged(CellWorldChangedEvent e)
         {
-            if (e.Type == CellChangeType.Added)
+            switch (e.Type)
             {
-                if (!_cellViews.ContainsKey(e.Position)) CreateCellView(e.Position, e.Attr);
-            }
-            else
-            {
-                if (_cellViews.TryGetValue(e.Position, out var view)) Destroy(view.gameObject);
-                _cellViews.Remove(e.Position);
+                case CellChangeType.Added:
+                    if (!_cellViews.ContainsKey(e.Position)) CreateCellView(e.Position, e.Attr);
+                    break;
+
+                case CellChangeType.Removed:
+                    // 动态格（种子落的）：本体在自己字典里
+                    if (_cellViews.TryGetValue(e.Position, out var actor))
+                    {
+                        _cellViews.Remove(e.Position);
+                        if (e.MoverId != 0)
+                        {
+                            actor.transform.SetParent(transform, false);
+                            _moverActors[e.MoverId] = actor;
+                        }
+                        else
+                        {
+                            Destroy(actor.gameObject);
+                        }
+                        break;
+                    }
+
+                    // 初始格（LevelActorBinder 生成）：取走本体转运动视图——否则贴图滞留原地而数据飞走（双影 bug）
+                    if (e.MoverId != 0 && _binder != null && _binder.TryTake(e.Position, out var taken))
+                    {
+                        taken.transform.SetParent(transform, false);
+                        _moverActors[e.MoverId] = taken;
+                    }
+                    break;
+
+                case CellChangeType.Changed:
+                    // 原位属性变化（引力转岩石/静止固定）：重新 Bind 换贴图
+                    if (_cellViews.TryGetValue(e.Position, out var changed)) changed.Bind(e.Position, e.Attr);
+                    break;
             }
         }
 
@@ -96,17 +129,32 @@ namespace TapCom.Presentation
             }
         }
 
+        /// <summary>运动格本体驱动：按 MoverId 对账（落定/出界的 Id 自动销毁其本体——落定处 Added 已生成新静止格）。</summary>
         private void SyncMovers()
         {
             var movers = _simulator.MovingCells;
-            while (_moverViews.Count < movers.Count) _moverViews.Add(NewSquare(Vector3.one, _square));
-            for (var i = 0; i < _moverViews.Count; i++)
+
+            // 清理已消失 Id（落定/出界）
+            _staleIds.Clear();
+            foreach (var id in _moverActors.Keys) _staleIds.Add(id);
+            foreach (var mover in movers) _staleIds.Remove(mover.Id);
+            foreach (var id in _staleIds)
             {
-                var active = i < movers.Count;
-                _moverViews[i].SetActive(active);
-                if (!active) continue;
-                _moverViews[i].transform.position = new Vector3(movers[i].Position.x, movers[i].Position.y, 0f);
-                _moverViews[i].GetComponent<SpriteRenderer>().sprite = AttrSprite(movers[i].Magic);
+                if (_moverActors.TryGetValue(id, out var stale) && stale != null) Destroy(stale.gameObject);
+                _moverActors.Remove(id);
+            }
+
+            // 本体跟随：无本体时兜底实例化（理论必有 Removed 先行转交）
+            foreach (var mover in movers)
+            {
+                if (!_moverActors.TryGetValue(mover.Id, out var actor) || actor == null)
+                {
+                    if (_cellPrefab == null) continue;
+                    actor = Instantiate(_cellPrefab, transform);
+                    actor.Bind(default, mover.Magic);
+                    _moverActors[mover.Id] = actor;
+                }
+                actor.transform.position = new Vector3(mover.Position.x, mover.Position.y, 0f);
             }
         }
 
@@ -159,14 +207,6 @@ namespace TapCom.Presentation
             SeedMagicType.Blue => WarnedSprite(_blueSprite, "Blue"),
             SeedMagicType.Red => WarnedSprite(_redSprite, "Red"),
             _ => WarnedSprite(_yellowSprite, "Yellow"),
-        };
-
-        private Sprite AttrSprite(CellMagicAttr attr) => attr switch
-        {
-            CellMagicAttr.Blue => WarnedSprite(_blueSprite, "Blue"),
-            CellMagicAttr.Red => WarnedSprite(_redSprite, "Red"),
-            CellMagicAttr.Yellow => WarnedSprite(_yellowSprite, "Yellow"),
-            _ => _square,
         };
 
         /// <summary>贴图槽没拖：一次性告警并回退白图（不中断）。</summary>
