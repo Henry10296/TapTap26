@@ -41,18 +41,22 @@ namespace TapCom.Core
         public static readonly IReadOnlyDictionary<GameState, GameState[]> AllowedTransitions =
             new Dictionary<GameState, GameState[]>
             {
-                { GameState.Initializing, new[] { GameState.Loading } },
+                { GameState.Initializing, new[] { GameState.TitleScreen, GameState.Loading } },
+                { GameState.TitleScreen, new[] { GameState.Loading } },
                 { GameState.Loading, new[] { GameState.Playing } },
-                { GameState.Playing, new[] { GameState.Paused, GameState.Victory, GameState.Defeat } },
+                { GameState.Playing, new[] { GameState.Paused, GameState.Victory, GameState.Defeat, GameState.TitleScreen } },
                 { GameState.Paused, new[] { GameState.Playing } },
-                { GameState.Victory, new[] { GameState.Loading } },
+                { GameState.Victory, new[] { GameState.Loading, GameState.TitleScreen } },
                 { GameState.Defeat, new[] { GameState.Loading } },
             };
 
+        private readonly EventBus _bus;
+
         public GameState Current { get; private set; }
 
-        public GameManager()
+        public GameManager(EventBus bus)
         {
+            _bus = bus ?? throw new ArgumentNullException(nameof(bus));
             Current = GameState.Initializing;
         }
 
@@ -75,7 +79,7 @@ namespace TapCom.Core
             var from = Current;
             Current = next;
             Debug.Log($"[Core] GameState: {from} -> {next}");
-            Services.EventBus.Publish(new GameStateChangedEvent(from, next));
+            _bus.Publish(new GameStateChangedEvent(from, next));
             return true;
         }
     }

@@ -16,6 +16,7 @@ namespace TapCom.Gameplay
         private InputAction _jumpAction;
         private InputAction _throwAction;
         private InputAction _aimAction;
+        private InputAction _aimHoldAction;
 
         /// <summary>移动轴（WASD / 方向键）。</summary>
         public Vector2 MoveInput => _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
@@ -28,6 +29,9 @@ namespace TapCom.Gameplay
 
         /// <summary>瞄准点屏幕坐标（像素）。</summary>
         public Vector2 AimScreenPosition => _aimAction != null ? _aimAction.ReadValue<Vector2>() : Vector2.zero;
+
+        /// <summary>按住右键瞄准中（轨迹预览显示开关，TASK-007）。</summary>
+        public bool AimHeld => _aimHoldAction != null && _aimHoldAction.IsPressed();
 
         private void Awake()
         {
@@ -45,6 +49,7 @@ namespace TapCom.Gameplay
             _jumpAction = _playerMap.FindAction("Jump");
             _throwAction = _playerMap.FindAction("Throw");
             _aimAction = _playerMap.FindAction("Aim");
+            _aimHoldAction = _playerMap.FindAction("AimHold");
         }
 
         private void OnEnable() => _playerMap?.Enable();

@@ -1,4 +1,5 @@
 using TapCom.Gameplay;
+using TapCom.MagicCircuit;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -40,18 +41,30 @@ namespace TapCom.Core
             Services.Initialize();
             var services = Services.Container;
             services.Register(services);
-            services.Register(new EventBus());
+            var bus = new EventBus();
+            services.Register(bus);
             _tick = new TickManager();
             services.Register(_tick);
-            _game = new GameManager();
+            _game = new GameManager(bus);
             services.Register(_game);
-            services.Register(new WorldManager());
+            var worlds = new WorldManager();
+            services.Register(worlds);
+            var levels = new LevelManager(worlds, _game, bus);
+            services.Register(levels);
 
-            Debug.Log("[Core] services ready: ServiceContainer, EventBus, TickManager, GameManager, WorldManager");
+            // TASK-007：Magic Circuit 模拟器（Tick 驱动 + IZeroFieldQuery 供 PlayerMotor 漂移查询）
+            var simulator = new MagicCircuitSimulator(bus, worlds, levels);
+            services.Register(simulator);
+            services.Register<IZeroFieldQuery>(simulator);
+            _tick.Register(simulator);
 
-            // v1 直通链：真实加载流程 M3 由 Level 接管。
-            _game.TrySetState(GameState.Loading);
-            _game.TrySetState(GameState.Playing);
+            Debug.Log("[Core] services ready: ServiceContainer, EventBus, TickManager, GameManager, WorldManager, LevelManager, MagicCircuitSimulator, SceneFlow");
+
+            // 启动到标题界面（TASK-008）；「开始游戏」按钮 → Loading（LevelBootstrap 装载完转 Playing）。真实关卡装载 M3 归 LevelManager。
+            _game.TrySetState(GameState.TitleScreen);
+
+            // 场景流转（进入主世界 / 退回标题）；须晚于 Services 初始化（OnEnable 订阅 EventBus）
+            gameObject.AddComponent<SceneFlow>();
         }
 
         private void OnDestroy()

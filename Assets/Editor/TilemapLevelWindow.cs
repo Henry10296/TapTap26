@@ -34,7 +34,8 @@ namespace TapCom.EditorTools
             EditorGUILayout.HelpBox(
                 "用法：①「场景关卡化」铺 Tilemap → ② Window > 2D > Tile Palette 建 Palette，" +
                 "把 CellTile 资产（Create > 魔法回路 > CellTile）拖进去当笔刷 → ③画关卡 → ④「导出 LevelData」。\n" +
-                "笔刷的格子自带 Cell 定义（在 CellTile 资产 Inspector 里配），导出按数据读，不看名字。", MessageType.Info);
+                "笔刷的格子自带 Cell 定义（在 CellTile 资产 Inspector 里配），导出按数据读，不看名字。\n" +
+                "出生点：用 SpawnTile 笔刷（Create > 魔法回路 > SpawnTile）画一格，导出记入 SpawnPoint。", MessageType.Info);
 
             if (GUILayout.Button("① 场景关卡化（Grid + Tilemap）")) SceneSetup();
             if (GUILayout.Button("② 导出 LevelData")) ExportLevelData();
@@ -70,10 +71,18 @@ namespace TapCom.EditorTools
 
             var defs = new List<CellDef>();
             _foreignCount = 0;
+            Vector3Int? spawnPos = null;
+            var spawnCount = 0;
             foreach (var pos in _tilemap.cellBounds.allPositionsWithin)
             {
                 var tile = _tilemap.GetTile(pos);
                 if (tile == null) continue;
+                if (tile is SpawnTile)
+                {
+                    spawnCount++;
+                    spawnPos ??= pos; // 多个时取第一个
+                    continue;
+                }
                 if (tile is CellTile cellTile)
                 {
                     defs.Add(new CellDef
@@ -107,11 +116,17 @@ namespace TapCom.EditorTools
                 AssetDatabase.CreateAsset(data, path);
             }
             data.Cells = defs;
+            data.SpawnPoint = spawnPos ?? Vector3Int.zero;
             EditorUtility.SetDirty(data);
             AssetDatabase.SaveAssets();
 
+            if (spawnCount == 0)
+                Debug.LogWarning("[TilemapLevel] 没画出生点（SpawnTile 笔刷），SpawnPoint 记为 (0,0,0)");
+            else if (spawnCount > 1)
+                Debug.LogWarning($"[TilemapLevel] 出生点画了 {spawnCount} 个，取第一个 {spawnPos.Value}");
+
             var warn = _foreignCount > 0 ? $"（跳过非 CellTile {_foreignCount} 个）" : "";
-            Debug.Log($"[TilemapLevel] exported: {path}，{defs.Count} defs{warn}", data);
+            Debug.Log($"[TilemapLevel] exported: {path}，{defs.Count} defs，spawn={data.SpawnPoint}{warn}", data);
         }
 
         /// <summary>编辑器内预览装载：LevelData → WorldGrid + CellActor，自证整条转换链。</summary>
@@ -137,8 +152,14 @@ namespace TapCom.EditorTools
             if (old != null) DestroyImmediate(old);
             var parent = new GameObject("LevelPreview");
 
+            // TASK-011 后 LevelLoader 只管数据；编辑器预览自己生成 actor（编辑态没有 ActorBinder 的事件链）
             var mgr = new WorldManager();
-            LevelLoader.Load(mgr, _levelId, data, actor, parent.transform);
+            var world = LevelLoader.Load(mgr, _levelId, data);
+            foreach (var cell in world.Cells)
+            {
+                var view = Instantiate(actor, parent.transform);
+                view.Bind(cell);
+            }
         }
     }
 }

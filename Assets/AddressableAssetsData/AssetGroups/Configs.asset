@@ -14,7 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_GroupName: Configs
   m_GUID: 521f590557761e34ca677dc85d7fd28e
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 0876bc1b672aafd4587fd96ea3e86279
+    m_Address: Configs/Item
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 0a096c5926be5224ba39fd1b57503cdb, type: 2}
   m_SchemaSet:
