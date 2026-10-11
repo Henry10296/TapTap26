@@ -20,7 +20,7 @@ namespace TapCom.MagicCircuit
 
         private void OnSeedThrown(SeedThrownEvent e)
         {
-            Debug.Log($"[MockSeedThrown] type={e.Type} origin={e.Origin} dir={e.Direction}");
+            Debug.Log($"[MockSeedThrown] type={e.Type} origin={e.Origin} dir={e.Direction} pv={e.PlayerVelocity}");
         }
     }
 }

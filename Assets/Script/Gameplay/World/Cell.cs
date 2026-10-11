@@ -64,6 +64,9 @@ namespace TapCom.Gameplay
         /// <summary>锁定状态（运行时）：true=冻结（世界默认，无重力无物理）；false=解锁，物理开启。</summary>
         public bool Locked;
 
+        /// <summary>始终固定（GDD 静止魔法配方）：true=永久免疫解锁（爆炸/引力均不可动），世界默认 false。</summary>
+        public bool Frozen;
+
         /// <summary>连接关系（运行时边集）：与本格相连的其他格点位置；只存已存在格点（Invariant 3）。</summary>
         public readonly List<Vector3Int> Connections = new List<Vector3Int>();
 

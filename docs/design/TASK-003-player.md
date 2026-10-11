@@ -60,7 +60,8 @@ PlayerActor：Awake GetComponent 注册四组件
 | `TapCom.Presentation.PlayerCharacter` | MonoBehaviour（RequireComponent Animator） | Presentation/Character | 动画状态 + 朝向翻转；只读 Motor 状态（铁律 #6）；依赖方向 Presentation→Gameplay 单向，PlayerActor 不反向登记 | High | 新建（2026-10-09 增量） | tech-spec §6 Character |
 | `PlayerMotor.Velocity` | Vector2 只读属性 | Gameplay/Player | 表现层读速度用 | High | 新建（2026-10-09 增量） | — |
 | `Player.controller` 参数契约 | `Speed`(float)=\|横向速度\|；`Grounded`(bool)=脚底检测 | Arts/Test/Animation | 动画状态机驱动参数 | High | Verified（YAML 实读：原 0 参数 + 无条件 AnyState→Idle，已替换） | Player.controller |
-| controller 迁移表 | AnyState→Jump(Grounded false, dur 0)；→Idle(Grounded true 且 Speed<0.1)；→Walk(Grounded true 且 Speed≥0.1)；CanTransitionToSelf=0 | Arts/Test/Animation | 三态互斥切换 | Med | Inference（Unity 重导入后 Animator 窗口肉眼校验） | 同上 |
+| controller 迁移表 | AnyState→Jump(Grounded false, dur 0)；→Idle(Grounded true 且 Speed<0.1)；→Walk(Grounded true 且 Speed≥0.1)；CanTransitionToSelf=0 | Arts/Test/Animation | 三态互斥切换 | Med | **Verified**（2026-10-09 Unity 重序列化确认接受；场景链路四点查证全通：Animator 挂 Player / Controller 绑定 / PlayerCharacter 挂载 / 迁移参数完好） | Player.controller + SampleScene.unity grep |
+| `TapCom.Presentation.PlayerCameraRig` | MonoBehaviour（挂 Main Camera）；跟随（指数平滑，z 锁定）+ 动态缩放（移动→_moveOrthoSize 放大，静止→_idleOrthoSize 拉回，阈值 _moveSpeedThreshold=0.1 判定 Motor.Velocity.magnitude）；Target 留空按名字兜底找 "Player" | Presentation/Camera | tech-spec §6 Camera：玩家视角；只读状态做表现（铁律 #6） | High | 新建（2026-10-09 增量）；数值待 Play 调 | — |
 | InputSystem_Actions Player map 增 `Throw`/`Aim` | JSON asset 编辑 | Core 输入资产 | 投掷/瞄准绑定 | High | Verified（asset 实读：Move/Jump/Attack/Look 现状） | Assets/InputSystem_Actions.inputactions |
 
 ### 4.3 契约（事件 / 公共接口）

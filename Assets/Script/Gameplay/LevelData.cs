@@ -24,5 +24,8 @@ namespace TapCom.Gameplay
     public class LevelData : ScriptableObject
     {
         public List<CellDef> Cells = new List<CellDef>();
+
+        /// <summary>玩家出生点（格子坐标；关卡编辑器用 SpawnTile 笔刷画，导出时写入）。</summary>
+        public Vector3Int SpawnPoint;
     }
 }
