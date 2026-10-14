@@ -304,23 +304,18 @@ namespace TapCom.MagicCircuit
 
             var dir = e.Direction.sqrMagnitude < 1e-6f ? Vector2.right : e.Direction.normalized;
 
-            // 出手口扫描：沿方向推进至阻挡，起点被挡则拒投（原型 throwSeed L1629-1632）
-            Vector2? muzzle = null;
-            for (var d = 0f; d <= MagicParams.MuzzleScanDistance + 1e-4f; d += MagicParams.MuzzleScanStep)
-            {
-                var p = e.Origin + dir * d;
-                if (OverlapsCell(world, p, MagicParams.SeedHitboxHalf)) break;
-                muzzle = p;
-            }
-            if (muzzle == null)
+            // 出手口扫描：沿方向推进至阻挡，起点被挡则拒投（判定共用 Ballistics.TryScanMuzzle，与 PlayerThrower 预检同源）
+            if (!Ballistics.TryScanMuzzle(world, e.Origin, dir, out var muzzle))
             {
                 Debug.Log("[MagicCircuit] throw blocked: muzzle occluded（出手位置被挡，拒投）");
                 return;
             }
 
-            var velocity = dir * MagicParams.ThrowSpeed + new Vector2(e.PlayerVelocity.x * MagicParams.PlayerVxInheritRatio, 0f);
-            _seeds.Add(new SeedProjectile { Position = muzzle.Value, Velocity = velocity, Type = e.Type });
-            Debug.Log($"[MagicCircuit] seed spawned type={e.Type} at {muzzle.Value} vel={velocity}");
+            // 弹道解算穿过指针点（2026-10-13「弹道终于指针」：固定速度解低弧角，超射程抬速），预览同源（TrajectoryPreview）
+            var velocity = Ballistics.SolveThrowVelocity(muzzle, e.Target, dir)
+                + new Vector2(e.PlayerVelocity.x * MagicParams.PlayerVxInheritRatio, 0f);
+            _seeds.Add(new SeedProjectile { Position = muzzle, Velocity = velocity, Type = e.Type });
+            Debug.Log($"[MagicCircuit] seed spawned type={e.Type} at {muzzle} vel={velocity}");
         }
 
         // —— 三连配方 ——

@@ -1,6 +1,5 @@
 using TapCom.Core;
 using UnityEngine;
-
 namespace TapCom.Gameplay
 {
     /// <summary>玩家资源：各属性种子库存（tech-spec §2 增补；截图初值 蓝×2 / 红×2 / 黄×4）。

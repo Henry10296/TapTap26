@@ -19,11 +19,13 @@ namespace TapCom.Presentation
         private void OnEnable()
         {
             Services.EventBus.Subscribe<LevelLoadedEvent>(OnLevelLoaded);
+            Services.EventBus.Subscribe<CellWorldChangedEvent>(OnCellWorldChanged);
         }
 
         private void OnDisable()
         {
             Services.EventBus.Unsubscribe<LevelLoadedEvent>(OnLevelLoaded);
+            Services.EventBus.Unsubscribe<CellWorldChangedEvent>(OnCellWorldChanged);
         }
 
         private void OnLevelLoaded(LevelLoadedEvent e)
@@ -43,6 +45,33 @@ namespace TapCom.Presentation
                 _actorByPos[cell.Position] = actor;
             }
             Debug.Log($"[LevelActorBinder] bound {_actors.Count} actors for '{e.WorldId}'");
+        }
+
+        /// <summary>
+        /// 初始格表现响应模拟器增删（修「幽灵方块」：消失配方/爆炸三块销毁发 Removed(MoverId=0)，
+        /// 数据已出字典而本类 actor 滞留 → 表现看得见、种子穿过、玩家仍被碰撞）。
+        /// MoverId≠0 的 Removed = 解锁转运动视图，本体由 CircuitView.TryTake 接管，本类不动作。
+        /// </summary>
+        private void OnCellWorldChanged(CellWorldChangedEvent e)
+        {
+            switch (e.Type)
+            {
+                case CellChangeType.Removed:
+                    if (e.MoverId != 0) return;
+                    if (_actorByPos.TryGetValue(e.Position, out var actor) && actor != null)
+                    {
+                        _actors.Remove(actor);
+                        _actorByPos.Remove(e.Position);
+                        Destroy(actor.gameObject);
+                    }
+                    break;
+
+                case CellChangeType.Changed:
+                    // 原位属性变化（引力三块转岩石/静止固定）：重绑换贴图
+                    if (_actorByPos.TryGetValue(e.Position, out var changed) && changed != null)
+                        changed.Bind(e.Position, e.Attr);
+                    break;
+            }
         }
 
         /// <summary>

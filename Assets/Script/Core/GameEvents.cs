@@ -33,6 +33,9 @@ namespace TapCom.Core
         /// <summary>投掷方向（单位向量）。</summary>
         public Vector2 Direction;
 
+        /// <summary>瞄准目标点（鼠标指针投回 z=0 平面；弹道解算的穿过点，2026-10-13 拍板「弹道终于指针」）。</summary>
+        public Vector2 Target;
+
         /// <summary>玩家当前速度（模拟器取 x·0.25 作水平继承，原型 L1633）。</summary>
         public Vector2 PlayerVelocity;
     }

@@ -1,0 +1,561 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e6]:
+      - link "Skip to content" [ref=e8] [cursor=pointer]:
+        - /url: "#main"
+      - generic [ref=e13]:
+        - banner [ref=e14]
+        - main [ref=e16]:
+          - group [ref=e19]:
+            - generic [ref=e21]:
+              - generic [ref=e24]:
+                - generic [ref=e25]:
+                  - button "Add icon"
+                  - generic [ref=e26]:
+                    - button "Add cover"
+                - textbox [ref=e30]:
+                  - /placeholder: New page
+              - generic [ref=e36]:
+                - table "Page properties" [ref=e37]:
+                  - row [ref=e39]:
+                    - cell "上次编辑" [ref=e44] [cursor=pointer]
+                    - cell "October 8, 2026 15:36" [ref=e54]
+                  - row [ref=e60]:
+                    - cell "上次编辑者" [ref=e65] [cursor=pointer]
+                    - cell [ref=e75]
+                  - row [ref=e85]:
+                    - cell "说明" [ref=e90] [cursor=pointer]
+                    - cell [ref=e100]:
+                      - button "功能需求" [ref=e103] [cursor=pointer]
+                  - row [ref=e106]:
+                    - cell "负责" [ref=e111] [cursor=pointer]
+                    - cell [ref=e121]:
+                      - button "程序看" [ref=e124] [cursor=pointer]
+                - button "Add a property" [ref=e134] [cursor=pointer]
+              - generic [ref=e138]:
+                - textbox [ref=e144]:
+                  - /placeholder: " "
+                - textbox [ref=e150]:
+                  - /placeholder: " "
+                  - link [ref=e151] [cursor=pointer]:
+                    - /url: /p/ddf81b68bccf82a59eb481408d38ef09?pvs=24
+                - textbox [ref=e163]:
+                  - /placeholder: " "
+                - generic [ref=e165]:
+                  - generic [ref=e172]:
+                    - textbox [ref=e173]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e178] [cursor=pointer]
+                  - generic [ref=e188]:
+                    - generic [ref=e194]:
+                      - generic [ref=e196]:
+                        - button "名称" [ref=e201] [cursor=pointer]
+                        - button "类型" [ref=e216] [cursor=pointer]
+                        - button "ID" [ref=e231] [cursor=pointer]
+                        - button "状态" [ref=e246] [cursor=pointer]
+                        - button "优先级" [ref=e261] [cursor=pointer]
+                        - button "阶段" [ref=e276] [cursor=pointer]
+                        - button "DDL" [ref=e291] [cursor=pointer]
+                      - generic [ref=e302]:
+                        - button [ref=e307] [cursor=pointer]
+                        - button [ref=e311] [cursor=pointer]
+                    - generic [ref=e317]:
+                      - generic [ref=e320]:
+                        - button "需求页范例" [ref=e323] [cursor=pointer]:
+                          - generic [ref=e325]:
+                            - button [ref=e329]
+                            - generic [ref=e334]: 需求页范例
+                        - button "范例" [ref=e339] [cursor=pointer]
+                        - generic [ref=e347]: "2"
+                        - button "完成" [ref=e353] [cursor=pointer]
+                        - button [ref=e364] [cursor=pointer]
+                        - button [ref=e367] [cursor=pointer]
+                        - button [ref=e370] [cursor=pointer]
+                      - generic [ref=e374]:
+                        - button [ref=e377] [cursor=pointer]
+                        - button [ref=e383] [cursor=pointer]
+                        - generic [ref=e384]: "1"
+                        - button "未开始" [ref=e390] [cursor=pointer]
+                        - button [ref=e401] [cursor=pointer]
+                        - button [ref=e404] [cursor=pointer]
+                        - button [ref=e407] [cursor=pointer]
+                    - button "New page" [ref=e410] [cursor=pointer]
+                - generic [ref=e415]:
+                  - generic [ref=e422]:
+                    - textbox [ref=e423]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e428] [cursor=pointer]
+                  - generic [ref=e438]:
+                    - generic [ref=e444]:
+                      - generic [ref=e446]:
+                        - button "名称" [ref=e451] [cursor=pointer]
+                        - button "类型" [ref=e466] [cursor=pointer]
+                        - button "ID" [ref=e481] [cursor=pointer]
+                        - button "状态" [ref=e496] [cursor=pointer]
+                        - button "优先级" [ref=e511] [cursor=pointer]
+                        - button "阶段" [ref=e526] [cursor=pointer]
+                        - button "DDL" [ref=e541] [cursor=pointer]
+                      - generic [ref=e552]:
+                        - button [ref=e557] [cursor=pointer]
+                        - button [ref=e561] [cursor=pointer]
+                    - button "New page" [ref=e566] [cursor=pointer]
+                - generic [ref=e571]:
+                  - generic [ref=e578]:
+                    - textbox [ref=e579]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e584] [cursor=pointer]
+                  - generic [ref=e594]:
+                    - generic [ref=e600]:
+                      - generic [ref=e602]:
+                        - button "名称" [ref=e607] [cursor=pointer]
+                        - button "类型" [ref=e622] [cursor=pointer]
+                        - button "ID" [ref=e637] [cursor=pointer]
+                        - button "状态" [ref=e652] [cursor=pointer]
+                        - button "优先级" [ref=e667] [cursor=pointer]
+                        - button "阶段" [ref=e682] [cursor=pointer]
+                        - button "DDL" [ref=e697] [cursor=pointer]
+                        - button "备注" [ref=e712] [cursor=pointer]
+                      - generic [ref=e723]:
+                        - button [ref=e728] [cursor=pointer]
+                        - button [ref=e732] [cursor=pointer]
+                    - button "New page" [ref=e737] [cursor=pointer]
+                - generic [ref=e742]:
+                  - generic [ref=e749]:
+                    - textbox [ref=e750]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e755] [cursor=pointer]
+                  - generic [ref=e765]:
+                    - generic [ref=e771]:
+                      - generic [ref=e773]:
+                        - button "名称" [ref=e778] [cursor=pointer]
+                        - button "类型" [ref=e793] [cursor=pointer]
+                        - button "ID" [ref=e808] [cursor=pointer]
+                        - button "状态" [ref=e823] [cursor=pointer]
+                        - button "优先级" [ref=e838] [cursor=pointer]
+                        - button "阶段" [ref=e853] [cursor=pointer]
+                        - button "DDL" [ref=e868] [cursor=pointer]
+                        - button "文本" [ref=e883] [cursor=pointer]
+                      - generic [ref=e894]:
+                        - button [ref=e899] [cursor=pointer]
+                        - button [ref=e903] [cursor=pointer]
+                    - button "New page" [ref=e908] [cursor=pointer]
+                - generic [ref=e913]:
+                  - generic [ref=e920]:
+                    - textbox [ref=e921]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e926] [cursor=pointer]
+                  - generic [ref=e936]:
+                    - generic [ref=e942]:
+                      - generic [ref=e944]:
+                        - button "名称" [ref=e949] [cursor=pointer]
+                        - button "类型" [ref=e964] [cursor=pointer]
+                        - button "ID" [ref=e979] [cursor=pointer]
+                        - button "状态" [ref=e994] [cursor=pointer]
+                        - button "优先级" [ref=e1009] [cursor=pointer]
+                        - button "阶段" [ref=e1024] [cursor=pointer]
+                        - button "DDL" [ref=e1039] [cursor=pointer]
+                      - generic [ref=e1050]:
+                        - button [ref=e1055] [cursor=pointer]
+                        - button [ref=e1059] [cursor=pointer]
+                    - button "New page" [ref=e1064] [cursor=pointer]
+                - generic [ref=e1069]:
+                  - generic [ref=e1076]:
+                    - textbox [ref=e1077]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e1082] [cursor=pointer]
+                  - generic [ref=e1092]:
+                    - generic [ref=e1098]:
+                      - generic [ref=e1100]:
+                        - button "名称" [ref=e1105] [cursor=pointer]
+                        - button "类型" [ref=e1120] [cursor=pointer]
+                        - button "ID" [ref=e1135] [cursor=pointer]
+                        - button "状态" [ref=e1150] [cursor=pointer]
+                        - button "优先级" [ref=e1165] [cursor=pointer]
+                        - button "阶段" [ref=e1180] [cursor=pointer]
+                        - button "DDL" [ref=e1195] [cursor=pointer]
+                      - generic [ref=e1206]:
+                        - button [ref=e1211] [cursor=pointer]
+                        - button [ref=e1215] [cursor=pointer]
+                    - generic [ref=e1220]:
+                      - generic [ref=e1221]:
+                        - progressbar [ref=e1223]
+                        - progressbar [ref=e1225]
+                        - progressbar [ref=e1227]
+                        - progressbar [ref=e1229]
+                        - progressbar [ref=e1231]
+                        - progressbar [ref=e1233]
+                        - progressbar [ref=e1235]
+                      - generic [ref=e1236]:
+                        - progressbar [ref=e1238]
+                        - progressbar [ref=e1240]
+                        - progressbar [ref=e1242]
+                        - progressbar [ref=e1244]
+                        - progressbar [ref=e1246]
+                        - progressbar [ref=e1248]
+                        - progressbar [ref=e1250]
+                      - generic [ref=e1251]:
+                        - progressbar [ref=e1253]
+                        - progressbar [ref=e1255]
+                        - progressbar [ref=e1257]
+                        - progressbar [ref=e1259]
+                        - progressbar [ref=e1261]
+                        - progressbar [ref=e1263]
+                        - progressbar [ref=e1265]
+                - generic [ref=e1267]:
+                  - generic [ref=e1274]:
+                    - textbox [ref=e1275]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e1280] [cursor=pointer]
+                  - generic [ref=e1290]:
+                    - generic [ref=e1296]:
+                      - generic [ref=e1298]:
+                        - button "名称" [ref=e1303] [cursor=pointer]
+                        - button "类型" [ref=e1318] [cursor=pointer]
+                        - button "ID" [ref=e1333] [cursor=pointer]
+                        - button "状态" [ref=e1348] [cursor=pointer]
+                        - button "优先级" [ref=e1363] [cursor=pointer]
+                        - button "阶段" [ref=e1378] [cursor=pointer]
+                        - button "DDL" [ref=e1393] [cursor=pointer]
+                      - generic [ref=e1404]:
+                        - button [ref=e1409] [cursor=pointer]
+                        - button [ref=e1413] [cursor=pointer]
+                    - generic [ref=e1418]:
+                      - generic [ref=e1419]:
+                        - progressbar [ref=e1421]
+                        - progressbar [ref=e1423]
+                        - progressbar [ref=e1425]
+                        - progressbar [ref=e1427]
+                        - progressbar [ref=e1429]
+                        - progressbar [ref=e1431]
+                        - progressbar [ref=e1433]
+                      - generic [ref=e1434]:
+                        - progressbar [ref=e1436]
+                        - progressbar [ref=e1438]
+                        - progressbar [ref=e1440]
+                        - progressbar [ref=e1442]
+                        - progressbar [ref=e1444]
+                        - progressbar [ref=e1446]
+                        - progressbar [ref=e1448]
+                      - generic [ref=e1449]:
+                        - progressbar [ref=e1451]
+                        - progressbar [ref=e1453]
+                        - progressbar [ref=e1455]
+                        - progressbar [ref=e1457]
+                        - progressbar [ref=e1459]
+                        - progressbar [ref=e1461]
+                        - progressbar [ref=e1463]
+                - generic [ref=e1465]:
+                  - generic [ref=e1472]:
+                    - textbox [ref=e1473]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e1478] [cursor=pointer]
+                  - generic [ref=e1488]:
+                    - generic [ref=e1494]:
+                      - generic [ref=e1496]:
+                        - button "名称" [ref=e1501] [cursor=pointer]
+                        - button "类型" [ref=e1516] [cursor=pointer]
+                        - button "ID" [ref=e1531] [cursor=pointer]
+                        - button "状态" [ref=e1546] [cursor=pointer]
+                        - button "优先级" [ref=e1561] [cursor=pointer]
+                        - button "阶段" [ref=e1576] [cursor=pointer]
+                        - button "DDL" [ref=e1591] [cursor=pointer]
+                      - generic [ref=e1602]:
+                        - button [ref=e1607] [cursor=pointer]
+                        - button [ref=e1611] [cursor=pointer]
+                    - generic [ref=e1616]:
+                      - generic [ref=e1617]:
+                        - progressbar [ref=e1619]
+                        - progressbar [ref=e1621]
+                        - progressbar [ref=e1623]
+                        - progressbar [ref=e1625]
+                        - progressbar [ref=e1627]
+                        - progressbar [ref=e1629]
+                        - progressbar [ref=e1631]
+                      - generic [ref=e1632]:
+                        - progressbar [ref=e1634]
+                        - progressbar [ref=e1636]
+                        - progressbar [ref=e1638]
+                        - progressbar [ref=e1640]
+                        - progressbar [ref=e1642]
+                        - progressbar [ref=e1644]
+                        - progressbar [ref=e1646]
+                      - generic [ref=e1647]:
+                        - progressbar [ref=e1649]
+                        - progressbar [ref=e1651]
+                        - progressbar [ref=e1653]
+                        - progressbar [ref=e1655]
+                        - progressbar [ref=e1657]
+                        - progressbar [ref=e1659]
+                        - progressbar [ref=e1661]
+                - generic [ref=e1663]:
+                  - generic [ref=e1670]:
+                    - textbox [ref=e1671]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e1676] [cursor=pointer]
+                  - generic [ref=e1686]:
+                    - generic [ref=e1692]:
+                      - generic [ref=e1694]:
+                        - button "名称" [ref=e1699] [cursor=pointer]
+                        - button "类型" [ref=e1714] [cursor=pointer]
+                        - button "ID" [ref=e1729] [cursor=pointer]
+                        - button "状态" [ref=e1744] [cursor=pointer]
+                        - button "优先级" [ref=e1759] [cursor=pointer]
+                        - button "阶段" [ref=e1774] [cursor=pointer]
+                        - button "DDL" [ref=e1789] [cursor=pointer]
+                      - generic [ref=e1800]:
+                        - button [ref=e1805] [cursor=pointer]
+                        - button [ref=e1809] [cursor=pointer]
+                    - generic [ref=e1814]:
+                      - generic [ref=e1815]:
+                        - progressbar [ref=e1817]
+                        - progressbar [ref=e1819]
+                        - progressbar [ref=e1821]
+                        - progressbar [ref=e1823]
+                        - progressbar [ref=e1825]
+                        - progressbar [ref=e1827]
+                        - progressbar [ref=e1829]
+                      - generic [ref=e1830]:
+                        - progressbar [ref=e1832]
+                        - progressbar [ref=e1834]
+                        - progressbar [ref=e1836]
+                        - progressbar [ref=e1838]
+                        - progressbar [ref=e1840]
+                        - progressbar [ref=e1842]
+                        - progressbar [ref=e1844]
+                      - generic [ref=e1845]:
+                        - progressbar [ref=e1847]
+                        - progressbar [ref=e1849]
+                        - progressbar [ref=e1851]
+                        - progressbar [ref=e1853]
+                        - progressbar [ref=e1855]
+                        - progressbar [ref=e1857]
+                        - progressbar [ref=e1859]
+                - generic [ref=e1861]:
+                  - generic [ref=e1868]:
+                    - textbox [ref=e1869]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e1874] [cursor=pointer]
+                  - generic [ref=e1884]:
+                    - generic [ref=e1890]:
+                      - generic [ref=e1892]:
+                        - button "名称" [ref=e1897] [cursor=pointer]
+                        - button "类型" [ref=e1912] [cursor=pointer]
+                        - button "ID" [ref=e1927] [cursor=pointer]
+                        - button "状态" [ref=e1942] [cursor=pointer]
+                        - button "优先级" [ref=e1957] [cursor=pointer]
+                        - button "阶段" [ref=e1972] [cursor=pointer]
+                        - button "DDL" [ref=e1987] [cursor=pointer]
+                      - generic [ref=e1998]:
+                        - button [ref=e2003] [cursor=pointer]
+                        - button [ref=e2007] [cursor=pointer]
+                    - generic [ref=e2012]:
+                      - generic [ref=e2013]:
+                        - progressbar [ref=e2015]
+                        - progressbar [ref=e2017]
+                        - progressbar [ref=e2019]
+                        - progressbar [ref=e2021]
+                        - progressbar [ref=e2023]
+                        - progressbar [ref=e2025]
+                        - progressbar [ref=e2027]
+                      - generic [ref=e2028]:
+                        - progressbar [ref=e2030]
+                        - progressbar [ref=e2032]
+                        - progressbar [ref=e2034]
+                        - progressbar [ref=e2036]
+                        - progressbar [ref=e2038]
+                        - progressbar [ref=e2040]
+                        - progressbar [ref=e2042]
+                      - generic [ref=e2043]:
+                        - progressbar [ref=e2045]
+                        - progressbar [ref=e2047]
+                        - progressbar [ref=e2049]
+                        - progressbar [ref=e2051]
+                        - progressbar [ref=e2053]
+                        - progressbar [ref=e2055]
+                        - progressbar [ref=e2057]
+                - generic [ref=e2059]:
+                  - generic [ref=e2066]:
+                    - textbox [ref=e2067]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e2072] [cursor=pointer]
+                  - generic [ref=e2082]:
+                    - generic [ref=e2088]:
+                      - generic [ref=e2090]:
+                        - button "名称" [ref=e2095] [cursor=pointer]
+                        - button "类型" [ref=e2110] [cursor=pointer]
+                        - button "ID" [ref=e2125] [cursor=pointer]
+                        - button "状态" [ref=e2140] [cursor=pointer]
+                        - button "优先级" [ref=e2155] [cursor=pointer]
+                        - button "阶段" [ref=e2170] [cursor=pointer]
+                        - button "DDL" [ref=e2185] [cursor=pointer]
+                      - generic [ref=e2196]:
+                        - button [ref=e2201] [cursor=pointer]
+                        - button [ref=e2205] [cursor=pointer]
+                    - generic [ref=e2210]:
+                      - generic [ref=e2211]:
+                        - progressbar [ref=e2213]
+                        - progressbar [ref=e2215]
+                        - progressbar [ref=e2217]
+                        - progressbar [ref=e2219]
+                        - progressbar [ref=e2221]
+                        - progressbar [ref=e2223]
+                        - progressbar [ref=e2225]
+                      - generic [ref=e2226]:
+                        - progressbar [ref=e2228]
+                        - progressbar [ref=e2230]
+                        - progressbar [ref=e2232]
+                        - progressbar [ref=e2234]
+                        - progressbar [ref=e2236]
+                        - progressbar [ref=e2238]
+                        - progressbar [ref=e2240]
+                      - generic [ref=e2241]:
+                        - progressbar [ref=e2243]
+                        - progressbar [ref=e2245]
+                        - progressbar [ref=e2247]
+                        - progressbar [ref=e2249]
+                        - progressbar [ref=e2251]
+                        - progressbar [ref=e2253]
+                        - progressbar [ref=e2255]
+                - generic [ref=e2257]:
+                  - generic [ref=e2264]:
+                    - textbox [ref=e2265]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e2270] [cursor=pointer]
+                  - generic [ref=e2280]:
+                    - generic [ref=e2286]:
+                      - generic [ref=e2288]:
+                        - button "名称" [ref=e2293] [cursor=pointer]
+                        - button "类型" [ref=e2308] [cursor=pointer]
+                        - button "ID" [ref=e2323] [cursor=pointer]
+                        - button "状态" [ref=e2338] [cursor=pointer]
+                        - button "优先级" [ref=e2353] [cursor=pointer]
+                        - button "阶段" [ref=e2368] [cursor=pointer]
+                        - button "DDL" [ref=e2383] [cursor=pointer]
+                      - generic [ref=e2394]:
+                        - button [ref=e2399] [cursor=pointer]
+                        - button [ref=e2403] [cursor=pointer]
+                    - generic [ref=e2408]:
+                      - generic [ref=e2409]:
+                        - progressbar [ref=e2411]
+                        - progressbar [ref=e2413]
+                        - progressbar [ref=e2415]
+                        - progressbar [ref=e2417]
+                        - progressbar [ref=e2419]
+                        - progressbar [ref=e2421]
+                        - progressbar [ref=e2423]
+                      - generic [ref=e2424]:
+                        - progressbar [ref=e2426]
+                        - progressbar [ref=e2428]
+                        - progressbar [ref=e2430]
+                        - progressbar [ref=e2432]
+                        - progressbar [ref=e2434]
+                        - progressbar [ref=e2436]
+                        - progressbar [ref=e2438]
+                      - generic [ref=e2439]:
+                        - progressbar [ref=e2441]
+                        - progressbar [ref=e2443]
+                        - progressbar [ref=e2445]
+                        - progressbar [ref=e2447]
+                        - progressbar [ref=e2449]
+                        - progressbar [ref=e2451]
+                        - progressbar [ref=e2453]
+                - generic [ref=e2455]:
+                  - generic [ref=e2462]:
+                    - textbox [ref=e2463]:
+                      - /placeholder: New database
+                    - button "Add view" [ref=e2468] [cursor=pointer]
+                  - generic [ref=e2478]:
+                    - generic [ref=e2484]:
+                      - generic [ref=e2486]:
+                        - button "名称" [ref=e2491] [cursor=pointer]
+                        - button "类型" [ref=e2506] [cursor=pointer]
+                        - button "ID" [ref=e2521] [cursor=pointer]
+                        - button "状态" [ref=e2536] [cursor=pointer]
+                        - button "优先级" [ref=e2551] [cursor=pointer]
+                        - button "阶段" [ref=e2566] [cursor=pointer]
+                        - button "DDL" [ref=e2581] [cursor=pointer]
+                      - generic [ref=e2592]:
+                        - button [ref=e2597] [cursor=pointer]
+                        - button [ref=e2601] [cursor=pointer]
+                    - generic [ref=e2606]:
+                      - generic [ref=e2607]:
+                        - progressbar [ref=e2609]
+                        - progressbar [ref=e2611]
+                        - progressbar [ref=e2613]
+                        - progressbar [ref=e2615]
+                        - progressbar [ref=e2617]
+                        - progressbar [ref=e2619]
+                        - progressbar [ref=e2621]
+                      - generic [ref=e2622]:
+                        - progressbar [ref=e2624]
+                        - progressbar [ref=e2626]
+                        - progressbar [ref=e2628]
+                        - progressbar [ref=e2630]
+                        - progressbar [ref=e2632]
+                        - progressbar [ref=e2634]
+                        - progressbar [ref=e2636]
+                      - generic [ref=e2637]:
+                        - progressbar [ref=e2639]
+                        - progressbar [ref=e2641]
+                        - progressbar [ref=e2643]
+                        - progressbar [ref=e2645]
+                        - progressbar [ref=e2647]
+                        - progressbar [ref=e2649]
+                        - progressbar [ref=e2651]
+                - link "需求页范例 (1)" [ref=e2655] [cursor=pointer]:
+                  - /url: /p/1-3f381b68bccf800e979ae544a889c39f?pvs=25
+                  - generic [ref=e2658]:
+                    - button [ref=e2661]
+                    - generic [ref=e2666]: 需求页范例 (1)
+                - textbox [ref=e2673]:
+                  - /placeholder: " "
+                - table [ref=e2684]:
+                  - rowgroup [ref=e2685]:
+                    - row [ref=e2686]:
+                      - cell [ref=e2687]:
+                        - textbox [ref=e2689]:
+                          - /placeholder: " "
+                      - cell [ref=e2690]:
+                        - textbox [ref=e2692]:
+                          - /placeholder: " "
+                      - cell [ref=e2693]:
+                        - textbox [ref=e2695]:
+                          - /placeholder: " "
+                    - row [ref=e2696]:
+                      - cell [ref=e2697]:
+                        - textbox [ref=e2699]:
+                          - /placeholder: " "
+                      - cell [ref=e2700]:
+                        - textbox [ref=e2702]:
+                          - /placeholder: " "
+                      - cell [ref=e2703]:
+                        - textbox [ref=e2705]:
+                          - /placeholder: " "
+                    - row [ref=e2706]:
+                      - cell [ref=e2707]:
+                        - textbox [ref=e2709]:
+                          - /placeholder: " "
+                      - cell [ref=e2710]:
+                        - textbox [ref=e2712]:
+                          - /placeholder: " "
+                      - cell [ref=e2713]:
+                        - textbox [ref=e2715]:
+                          - /placeholder: " "
+                    - row [ref=e2716]:
+                      - cell [ref=e2717]:
+                        - textbox [ref=e2719]:
+                          - /placeholder: " "
+                      - cell [ref=e2720]:
+                        - textbox [ref=e2722]:
+                          - /placeholder: " "
+                      - cell [ref=e2723]:
+                        - textbox [ref=e2725]:
+                          - /placeholder: " "
+                - link "New page" [ref=e2729] [cursor=pointer]:
+                  - /url: /p/3f381b68bccf8081b0f0e537bae53e27?pvs=25
+                  - generic [ref=e2732]:
+                    - button [ref=e2735]
+                    - generic [ref=e2739]: New page
+    - status [ref=e2742]
+    - alert [ref=e2743]
+  - iframe [aria-hidden] [ref=e2744]
