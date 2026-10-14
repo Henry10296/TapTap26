@@ -66,3 +66,6 @@ crashlytics-build.properties
 # OS
 Thumbs.db
 .DS_Store
+
+# AI tool junk
+.playwright-mcp/

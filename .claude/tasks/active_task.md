@@ -583,6 +583,7 @@ Core 运行框架：GameManager（GameState 状态机 + Service 容器）、Tick
 - 2026-10-13｜**AudioCatalog 两映射已填**（用户「你先填上」授权）：SeedThrown→Play_Seed_Throw；SpellCast switch 四配方（Zero→Magic_LowGravity/Blast→Magic_Explode/Attract→Magic_Attract/Static→Magic_Static）+类头注释更新｜已核验（Edit 成功；未编译，验收=扔种子/触发配方听声）
 - 2026-10-13｜**「BGM 约 15 秒自己停」根因 = Play_BGM 是 OneShot 非循环**（Main.json：DurationType OneShot 15.36s；对照同包 Ambient_Ruin=Infinite）→ 修法在 Wwise 侧给音乐容器/段落开 Loop ∞ 重新生成；**自证信号 = 新 Main.json 里 Play_BGM DurationType 变 Infinite**（不用进游戏）｜已核验（bank JSON 实读）
 - 2026-10-13｜**bank 产物不进 git（用户指令「音频资源不进git」）**：.gitignore:60 加 `/[Aa]ssets/[Ss]treaming[Aa]ssets/[Aa]udio/[Gg]enerated[Ss]ound[Bb]anks/`（对齐 Arts 先例）；check-ignore 实证 Main.bnk/English(US) 命中、三层文件夹 .meta 命中否定规则保留可追踪（ls-files 尚未 track，随下次 add 进库）。代价：新 clone 无声，需重新生成/拷 bank——用户拍板接受｜已核验（git status/check-ignore 实测）
+- 2026-10-14｜`.playwright-mcp/` 加 gitignore（用户指令，工具垃圾目录）+ 工作区归因：Changes 混杂 = 最后 commit（10-11 20:03）后 A 音频线/B 玩法线（10-13 瞄准即定色+弹道终于指针，另一会话）/C 杂物三线未提交堆积，已给分两个 commit 建议，待用户拍板｜已核验（git diff/status 实测）
 
 ---
 
