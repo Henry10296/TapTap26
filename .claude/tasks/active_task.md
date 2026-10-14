@@ -683,3 +683,56 @@ Core 运行框架：GameManager（GameState 状态机 + Service 容器）、Tick
 2. 拍板后固化全局 skill：`~/.claude/skills/notion-spec-sync/SKILL.md`（流程=拉取/清单/分析三段，含抓取细节备忘 6 条）。
 3. （可选）skill 加「与上次快照 diff」段，增量看需求变化。
 4. P0 可开工项收缩为：结晶方块本体（真代码）+ 背景方块（语义对照后可能零代码）；TASK-015 是否按此收缩范围开工，待用户拍板。
+
+---
+
+## Task ID: TASK-015-背景方块（Tile 分层装饰层）
+
+**Status: CODING（代码已落盘，编译/人工配置/验收待用户）**——用户拍板：方案 A（不进 Cell 体系）+ 每关独立加载 + 运行时保持 Tile 形态 + 自定义层级（分类分层）。2026-10-14「开工」授权。
+
+## 目标
+
+背景方块 = 纯视觉装饰层，随 LevelData 走、运行时按数据重建为 Tilemap（Tile 形态原样保留），不进 Cell/魔法反应体系。
+
+## 产出
+
+| 文件 | 改动 |
+|---|---|
+| `Assets/Script/Gameplay/LevelData.cs` | +`BackgroundTileDef`(Pos+TileBase 引用)、`BackgroundLayerDef`(Name/SortingOrder/Tiles)、`LevelData.BackgroundLayers` 字段 |
+| `Assets/Editor/TilemapLevelWindow.cs` | +「①b 加背景层」按钮（LevelGrid 下建 Background_N，sortingOrder 递减）；导出时读全部 Background_* → `ExportBackgroundLayers()` |
+| `Assets/Script/Gameplay/LevelManager.cs` | `LevelLoadedEvent` 扩展携带 `Data`（源 LevelData）；Publish 行加参（唯一构造点 ：96；三订阅方 Binder/CircuitView/PlayerSpawner 只消费，不受影响） |
+| `Assets/Script/Presentation/BackgroundLayerLoader.cs` | 新建：订 LevelLoadedEvent，按 **e.Data**（不拖引用）重建背景 Tilemap（SetTile），Clear 防重载叠层 |
+
+## 本轮证据链
+
+- 2026-10-14｜链路核实：Tile 只活在编辑器（导出→LevelData→运行时隐藏编辑 Tilemap `LevelBootstrap.cs:22`），运行时表现由 CellActor 重建——背景不导出就随场景丢失，故必须进 LevelData 才能随关卡加载｜已核验（读码）
+- 2026-10-14｜`LevelLoadedEvent(worldId, world, spawnPoint)` 不携带 LevelData（`LevelManager.cs:7,:96`）→ Loader 自持 `_levelData` 引用（与 LevelBootstrap 同款）｜已核验（读码）
+- 2026-10-14｜TileBase 引用直存 SO 随资产链打包、不走 Addressables 单独口子；TilemapRenderer vs SpriteRenderer 同排序管线（sortingOrder 负值压后）｜inference（Unity 标准机制，未实测 build/未跑 Play）
+- 2026-10-14｜3 文件未编译：本会话无 Unity 编译环境，编译/运行验证归用户（测试纪律：不创造性绕过）｜inference→待用户升格
+- 2026-10-14｜**用户纠错「tile 是加载的，不是拖 levelData」**：Loader 首版要拖 LevelData 引用，违背"数据随加载链走"。修正：`LevelLoadedEvent` 加 `Data` 字段（grep 确认构造调用点仅 LevelManager.cs:96 一处；订阅方 Binder/CircuitView/PlayerSpawner 均只消费事件，加字段不受影响），Loader 删 `_levelData` 改读 `e.Data`｜已核验（grep + Edit）
+
+## 人工配置步骤（全部 Unity 手动）
+
+1. 关卡编辑器（Tools/魔法回路/关卡编辑器）→「① 场景关卡化」→「①b 加背景层」按需点 N 次（Background_0/1/…，sortingOrder -1/-2/… 自动递减，可 Inspector 改）
+2. Tile Palette 拖**普通 Tile 资产**（Create > 2D > Tiles > Tile，拖贴图即成）当背景笔刷，画到 Background_* 上
+3. 画完「② 导出 LevelData」——日志会报「背景 N 层」
+4. Game 场景：Grid 下人工建空物体 `BackgroundRoot` → 挂 `BackgroundLayerLoader` 组件 → 拖 BackgroundRoot 到 `_backgroundRoot`（**LevelData 不用拖**——随 LevelLoadedEvent.Data 到达）
+5. 注意：BackgroundRoot **别放进** `_editorTilemapRoot`（LevelBootstrap 运行时会隐藏它）；BackgroundRoot 下只放背景层（Clear 清空全牌子）
+
+## 验收清单
+
+1. 导出日志：`exported: ... 背景 N 层`，LevelData Inspector 可见 BackgroundLayers 数据（层名/sortingOrder/Tiles 数）
+2. Play 进 Loading：Console `[BackgroundLayerLoader] 'Level_01' 重建背景 N 层`
+3. 表现：背景贴图显示、压在格子/玩家之下（sortingOrder 生效）；改 Background_N 层的 sortingOrder 再导出重跑，前后关系跟随变化
+4. 分类分层：建 ≥2 层各画不同贴图，两层前后关系正确
+5. 重载不叠层：关卡重载（Loading 再进）背景不重复
+6. 回归：Cell 主链不受影响（投掷/配方/幽灵方块修复行为不变）
+
+## Open Questions
+
+- 多关卡时 LevelData/BackgroundRoot 的组织（TASK-012 关卡生命周期归口）；背景 Tile 资产是否入 Addressables 远端
+- 编辑器「③ 编辑器预览装载」暂不含背景重建（主链已通，需要再加）
+
+## Next Steps
+
+1. 用户聚焦 Unity → 编译 → 按人工配置步骤搭建 → Play 过验收清单 6 项。
