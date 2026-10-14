@@ -133,3 +133,27 @@ IAudioBackend.Play(id)
 | 2 | AudioCatalog + AudioManager | 新 `Script/Presentation/Audio/AudioManager.cs` | 编译过 |
 | 3 | 装配 | 改 `Script/Core/CoreBootstrap.cs`（+2 行 + ready 日志串） | ready 日志含 AudioManager |
 | 4 | Play 验收 | 无代码 | §5 表 7 项用户实测 |
+
+---
+
+## 9. Coding 期增量拍板（2026-10-12，用户逐项拍板后落码）
+
+**用户在 Design 待审期间自行导入了 Wwise 集成包（2024.1.17）并生成了 bank（Play_BGM / Stop_BGM）**，随后三轮调试实证了组件路线的物理堵点：`.wproj` 不在本机（全盘 + 注册表搜证零命中）→ Wwise Picker 永远空 → AkBank/AkEvent 组件的 Data 槽选不了内容。用户最终拍板「写」→ 真实后端替代 mock 先行，组件路线废弃。
+
+| 增量 | Design 原案 | 落地 | 证据 |
+|---|---|---|---|
+| 集成版本 | 未锁版本 | 2024.1.17 | NewVersion.txt 实读 |
+| 后端 | MockAudioBackend 日志自证 | **WwiseAudioBackend**（bank 首播前自动加载 + PostEvent） | bank 在 StreamingAssets 标准位（find 实证） |
+| 映射表 | 六声音 ID（Play_Throw/Play_Spell_*/Music_Title/Music_Game） | **缩到 bank 现有两事件**：Playing→Play_BGM、TitleScreen→Stop_BGM；投掷/配方映射留位返回 null（静默跳过） | Main.txt:2-3 仅两事件 |
+| bank 加载 | 场景 AkBank 组件（人工） | **代码加载**（AkBankManager.LoadBank，首播前 EnsureLoaded） | 组件路线需 Picker，堵死 |
+| Post 的 GO | 未定 | **null = AK_INVALID_GAME_OBJECT**（全局声） | InternalGameObjectHash null 分支（AkUnitySoundEngine.cs:65-68）+ PreGameObjectAPICallUserHook 空 partial |
+| 清理 | 未列 | PlayerInventory.cs:30 试验行 + using AK.Wwise（用户拍板清） | 该行为用户插的试验代码（非任何 AI 线所写） |
+
+**API 锚点（全全局类型，Assembly-CSharp 可见已实证——PlayerInventory 曾编译通过）**：`AkSoundEngine.IsInitialized()` / `AkSoundEngine.LoadBank(string, out uint)`（Generated/Windows:527，返回 AKRESULT；**注意 AkBankManager.LoadBank 返回 uint bank handle ID 非错误码，不可用于判成功**）/ `AkSoundEngine.PostEvent(string, GameObject)`（AkUnitySoundEngine.cs:452）/ `AkSoundEngine.AK_INVALID_PLAYING_ID` / `AKRESULT.AK_Success`（AKRESULT.cs:15）。
+
+**验收更新（替代 §5 mock 日志版）**：
+1. ready 日志含 `AudioManager`
+2. 点开始进 Playing → `[Audio] bank loaded: Main` + `[Audio] play Play_BGM` + **听到 BGM**
+3. Esc 回标题 → `[Audio] play Stop_BGM` + BGM 停
+4. 投掷/配方：无音频日志（映射留位 null，静默）——bank 扩充后填 AudioCatalog 常量即通
+5. Console 无 `Event ID not found`（PlayerInventory 试验行已清，唯一的 Post 源就是本模块）

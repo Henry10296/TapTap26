@@ -8,23 +8,27 @@ namespace TapCom.Presentation
 {
     /// <summary>
     /// 轨迹预览（TASK-007 目标 7）：按住右键 → 点状抛物线（无落点标记，用户 2026-10-10 拍板）。
-    /// 与真实弹道共用 Ballistics.Step ⇒ M1 内预览 = 精确弹道；
+    /// 与真实弹道共用 Ballistics.Step + SolveThrowVelocity ⇒ M1 内预览 = 精确弹道（2026-10-13「弹道终于指针」：
+    /// 初速解算穿过指针点，与 OnSeedThrown 同一函数同一出点扫描）；
     /// M2 引入阻尼/场差异后本预览退化为「瞄准提示」，须重新标注「预览≠保证」（用户 2026-10-09 原始说明）。
-    /// 出点 = 真实投掷同款出生口扫描（Ballistics.OverlapsCell 推进至阻挡）；全程被挡则从 ThrowPoint 原点直接画，
+    /// 出点 = 真实投掷同款出生口扫描（Ballistics.TryScanMuzzle 推进至阻挡）；全程被挡则从 ThrowPoint 原点直接画，
     /// 保证任意瞄准角度（含朝下/贴墙/低天花板）都有线可见。
+    /// 点列止于指针（2026-10-13 拍板「起点头顶、终点鼠标」；v2 解算后弧线过指针，固定时窗会继续延伸——已改进度越界即收尾）；遇障提前止于障碍面。
     /// </summary>
     public class TrajectoryPreview : MonoBehaviour
     {
         /// <summary>头顶抛点；留空则自动找名为 ThrowPoint 的子物体，再找不到回退自身位置。</summary>
         [SerializeField] private Transform _throwPoint;
 
-        private const int DotCount = 96;        // 密点列：间距 ≈0.16 格，读感为连续曲线（用户「要顺滑」）
-        private const float StepTime = 0.0125f; // 96×0.0125 = 1.2s 预视窗（原 32×0.035≈1.12s 基本不变）
+        /// <summary>点列数量，Inspector 可调（2026-10-13 需求）；改动重进 Play 生效（Start 建池）。</summary>
+        [SerializeField] private int _dotCount = 96;
+
+        private const float StepTime = 0.0125f; // 单点步长：96 点 ≈ 1.2s 预视窗（点数变更视窗随之伸缩）
         private const float DotSize = 0.09f;
 
         private static readonly Color DotColor = new Color(1f, 1f, 1f, 0.7f);
 
-        private readonly List<GameObject> _dots = new List<GameObject>(DotCount);
+        private List<GameObject> _dots;
         private Sprite _square;
         private PlayerInputReader _input;
         private Camera _mainCamera;
@@ -41,7 +45,8 @@ namespace TapCom.Presentation
             Services.Container.TryGet(out _zeroQuery);
             if (_throwPoint == null) _throwPoint = transform.Find("ThrowPoint");
 
-            for (var i = 0; i < DotCount; i++)
+            _dots = new List<GameObject>(_dotCount);
+            for (var i = 0; i < _dotCount; i++)
             {
                 var dot = NewSquare(Vector3.one * DotSize, DotColor);
                 dot.SetActive(false);
@@ -61,45 +66,55 @@ namespace TapCom.Presentation
             }
 
             var origin = _throwPoint != null ? (Vector2)_throwPoint.position : (Vector2)transform.position;
-            var dir = AimDirection(origin);
+            var aimWorld = AimWorldPoint();
+            var aim = aimWorld - origin;
+            var dir = aim.sqrMagnitude < 1e-6f ? Vector2.right : aim.normalized;
 
-            // 出点 = 真实投掷同款出生口扫描：沿方向推进至阻挡；起点即被挡则从原点画（任意角度可见，允许带误差）
-            var start = origin;
-            for (var d = 0f; d <= MagicParams.MuzzleScanDistance + 1e-4f; d += MagicParams.MuzzleScanStep)
-            {
-                var p = origin + dir * d;
-                if (Ballistics.OverlapsCell(world, p, MagicParams.SeedHitboxHalf)) break;
-                start = p;
-            }
+            // 出点 = 真实投掷同款出手口扫描（TryScanMuzzle）；起点即被挡则从原点画（任意角度可见，允许带误差）
+            var start = Ballistics.TryScanMuzzle(world, origin, dir, out var muzzle) ? muzzle : origin;
 
             var pos = start;
-            var vel = dir * MagicParams.ThrowSpeed; // 预览不含玩家速度继承的采样误差源：与投掷公式一致（继承项在发布时已定，静止瞄准为主）
+            // 初速解算穿过指针点：与 OnSeedThrown 同一函数同一出点 ⇒ 预览=真实
+            //（预览不含玩家速度继承的采样误差源：继承项在发布时已定，静止瞄准为主）
+            var vel = Ballistics.SolveThrowVelocity(start, aimWorld, dir);
+
+            // 线终于指针：弧线到达指针即收尾，末点钉在指针上，不再延伸（拍板「起点头顶、终点鼠标」）
+            var toTarget = aimWorld - start;
+            var targetDist = toTarget.magnitude;
+            var along = toTarget / Mathf.Max(targetDist, 1e-6f);
 
             var shown = 0;
-            for (var i = 0; i < DotCount; i++)
+            for (var i = 0; i < _dotCount; i++)
             {
                 var zero = _zeroQuery != null && _zeroQuery.InZeroField(pos);
                 var r = Ballistics.Step(world, pos, vel, StepTime, MagicParams.SeedHitboxHalf, zero);
                 pos = r.Position;
                 vel = r.Velocity;
+
+                if (Vector2.Dot(pos - start, along) >= targetDist)
+                {
+                    _dots[i].transform.position = new Vector3(aimWorld.x, aimWorld.y, 0f);
+                    _dots[i].SetActive(true);
+                    shown = i + 1;
+                    break;
+                }
+
                 _dots[i].transform.position = new Vector3(pos.x, pos.y, 0f);
                 _dots[i].SetActive(true);
                 shown = i + 1;
-                if (r.Hit) break; // 遇障停（同原型：点列止于障碍面）
+                if (r.Hit) break; // 遇障提前止于障碍面（种子真实停点）
             }
-            for (var i = shown; i < DotCount; i++) _dots[i].SetActive(false);
+            for (var i = shown; i < _dotCount; i++) _dots[i].SetActive(false);
         }
 
-        /// <summary>瞄准方向：屏幕鼠标点投回 z=0 平面（与 PlayerThrower 同一换算）。</summary>
-        private Vector2 AimDirection(Vector2 origin)
+        /// <summary>瞄准点：屏幕鼠标坐标投回 z=0 平面（与 PlayerThrower 同一换算）。</summary>
+        private Vector2 AimWorldPoint()
         {
             if (_mainCamera == null) _mainCamera = Camera.main;
-            if (_mainCamera == null || _input == null) return Vector2.right;
+            if (_mainCamera == null || _input == null) return Vector2.zero;
             var screen = _input.AimScreenPosition;
             var planeDistance = -_mainCamera.transform.position.z;
-            var aimWorld = _mainCamera.ScreenToWorldPoint(new Vector3(screen.x, screen.y, planeDistance));
-            var dir = (Vector2)aimWorld - origin;
-            return dir.sqrMagnitude < 1e-6f ? Vector2.right : dir.normalized;
+            return (Vector2)_mainCamera.ScreenToWorldPoint(new Vector3(screen.x, screen.y, planeDistance));
         }
 
         private void SetVisible(bool visible)

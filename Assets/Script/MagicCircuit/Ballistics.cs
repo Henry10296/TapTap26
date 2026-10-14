@@ -55,6 +55,54 @@ namespace TapCom.MagicCircuit
             return false;
         }
 
+        /// <summary>
+        /// 出手口扫描：沿方向推进至阻挡，返回最后一个不重叠点（原型 throwSeed L1629-1632）。
+        /// 起点即被挡返回 false（拒投）。真实投掷（PlayerThrower 预检 / OnSeedThrown）与预览共用同一判定。
+        /// </summary>
+        public static bool TryScanMuzzle(WorldGrid world, Vector2 origin, Vector2 dir, out Vector2 muzzle)
+        {
+            Vector2? found = null;
+            for (var d = 0f; d <= MagicParams.MuzzleScanDistance + 1e-4f; d += MagicParams.MuzzleScanStep)
+            {
+                var p = origin + dir * d;
+                if (OverlapsCell(world, p, MagicParams.SeedHitboxHalf)) break;
+                found = p;
+            }
+            muzzle = found ?? origin;
+            return found != null;
+        }
+
+        /// <summary>
+        /// 解算使抛物线恰好经过 target 的初速度（2026-10-13 拍板「弹道终于指针」，指哪打哪）。
+        /// 固定 ThrowSpeed、解低弧（直接）弹道角——初速方向一般略高于指针射线，靠重力下垂正好落在指针上
+        ///（v1「固定方向解速率」方向恒指向目标 → 垂直分量恒 0 → 恒回退，实为 no-op，已废弃）。
+        /// 目标超出该速度射程（判别式 &lt; 0）时抬到最低可达速度 s²=g(y+√(x²+y²))，仍终到指针。
+        /// 极远目标受 Step 内 VelCap 钳制会略短——预览与真实走同一函数同一步进，预览=真实不破坏。
+        /// </summary>
+        public static Vector2 SolveThrowVelocity(Vector2 origin, Vector2 target, Vector2 dir)
+        {
+            var d = dir.sqrMagnitude < 1e-6f ? Vector2.right : dir.normalized;
+            var delta = target - origin;
+            if (delta.sqrMagnitude < 1e-6f) return d * MagicParams.ThrowSpeed; // 指针贴着出点：无弹道可言
+
+            var g = MagicParams.Gravity;
+            var s = MagicParams.ThrowSpeed;
+            var x = Mathf.Abs(delta.x);
+            var y = delta.y;
+
+            // 可达判别式（抛物线安全包络）：s⁴-2gy·s²-g²x² ≥ 0；不可达时抬到最低可达速度
+            var disc = s * s * (s * s - 2f * g * y) - g * g * x * x;
+            if (disc < 0f) s = Mathf.Sqrt(g * (y + Mathf.Sqrt(x * x + y * y)));
+
+            // 低弧解：tanθ = (s²-√D)/(g·x)；x 取下限防除零（x→0 极限 = 竖直投掷）
+            var xx = Mathf.Max(x, 1e-3f);
+            var sqrtDisc = Mathf.Sqrt(Mathf.Max(0f, s * s * (s * s - 2f * g * y) - g * g * xx * xx));
+            var tanTheta = (s * s - sqrtDisc) / (g * xx);
+            var cosTheta = 1f / Mathf.Sqrt(1f + tanTheta * tanTheta);
+            var signX = delta.x >= 0f ? 1f : -1f;
+            return new Vector2(signX * cosTheta, tanTheta * cosTheta) * s;
+        }
+
         private static void MoveAxis(WorldGrid world, ref Result result, float dt, float half, bool axisX)
         {
             var v = axisX ? result.Velocity.x : result.Velocity.y;

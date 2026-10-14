@@ -166,7 +166,7 @@ namespace TapCom.Presentation
             {
                 if (!_chargeViews.TryGetValue(pos, out var view))
                 {
-                    view = NewSquare(Vector3.one * 0.94f, _square);
+                    view = NewSquare(Vector3.one * 0.94f, _square, ChargeSortingOrder);
                     _chargeViews[pos] = view;
                 }
                 view.SetActive(true);
@@ -192,13 +192,18 @@ namespace TapCom.Presentation
             _cellViews[pos] = actor;
         }
 
-        private GameObject NewSquare(Vector3 scale, Sprite sprite)
+        /// <summary>蓄能白块排序：显式压过方块贴图——双方块 z=0 同 order 时 Unity 排序未定义，
+        /// 白块「有时」被盖住 = 看不到预备效果直接反应（2026-10-13 修复）。</summary>
+        private const int ChargeSortingOrder = 10;
+
+        private GameObject NewSquare(Vector3 scale, Sprite sprite, int sortingOrder = 0)
         {
             var go = new GameObject("cell-view");
             go.transform.SetParent(transform, false);
             go.transform.localScale = scale;
             var renderer = go.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite != null ? sprite : _square;
+            renderer.sortingOrder = sortingOrder;
             return go;
         }
 

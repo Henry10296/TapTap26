@@ -1,0 +1,316 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e6]:
+      - link "Skip to content" [ref=e8] [cursor=pointer]:
+        - /url: "#main"
+      - generic [ref=e13]:
+        - banner [ref=e14]:
+          - generic [ref=e2745]:
+            - text: Anyone with a Notion account can edit this page.
+            - button "Sign up or login to edit" [ref=e2746] [cursor=pointer]
+          - generic [ref=e2748]:
+            - generic [ref=e2749]:
+              - link "聚光灯2026开发文档" [ref=e2751] [cursor=pointer]:
+                - /url: /p/2026-3e481b68bccf8017b53bf46c0d3be2c8?pvs=18
+              - generic [aria-hidden] [ref=e2754]: /
+              - generic [ref=e2756]:
+                - button "..." [ref=e2757] [cursor=pointer]
+                - generic [aria-hidden] [ref=e2758]: /
+              - link "目录" [ref=e2760] [cursor=pointer]:
+                - /url: /p/87b81b68bccf8205864b01255492805b?v=82481b68bccf8372a6ff8878167918c9&pvs=18
+              - generic [aria-hidden] [ref=e2763]: /
+              - button "Feature_Spec" [ref=e2764] [cursor=pointer]
+            - button "Comments" [ref=e2769] [cursor=pointer]
+            - button "Duplicate page" [ref=e2774] [cursor=pointer]
+            - button "More actions" [ref=e2778] [cursor=pointer]
+        - main [ref=e16]:
+          - generic [ref=e21]:
+            - heading "Feature_Spec" [level=1] [ref=e2782]
+            - table "Page properties" [ref=e2783]:
+              - row [ref=e2785]:
+                - cell "上次编辑" [ref=e2790]
+                - cell "October 8, 2026 15:36" [ref=e2800]
+              - row [ref=e2806]:
+                - cell "上次编辑者" [ref=e2811]
+                - cell "Ice9 Ice9" [ref=e2821]:
+                  - generic [ref=e2828]:
+                    - img "Ice9" [ref=e2833]
+                    - generic [ref=e2834]: Ice9
+              - row [ref=e2836]:
+                - cell "说明" [ref=e2841]
+                - cell "功能需求" [ref=e2851]
+              - row [ref=e2857]:
+                - cell "负责" [ref=e2862]
+                - cell "程序看" [ref=e2872]
+            - generic [ref=e138]:
+              - generic [ref=e2882]: 需求页格式参考
+              - link [ref=e2894] [cursor=pointer]:
+                - /url: /p/ddf81b68bccf82a59eb481408d38ef09?pvs=24
+              - generic [ref=e2908]:
+                - generic [ref=e2918]:
+                  - button "Filter" [ref=e2922] [cursor=pointer]
+                  - button "Sort" [ref=e2928] [cursor=pointer]
+                  - button "Search" [ref=e2932] [cursor=pointer]
+                - generic [ref=e2941]:
+                  - generic [ref=e2948]:
+                    - button "名称" [disabled] [ref=e2952]
+                    - button "类型" [disabled] [ref=e2965]
+                    - button "ID" [disabled] [ref=e2978]
+                    - button "状态" [disabled] [ref=e2991]
+                    - button "优先级" [disabled] [ref=e3004]
+                    - button "阶段" [disabled] [ref=e3017]
+                    - button "DDL" [disabled] [ref=e3030]
+                  - generic [ref=e3041]:
+                    - generic [ref=e3044]:
+                      - button "需求页范例" [ref=e3047]:
+                        - generic [ref=e3049]:
+                          - button [ref=e3053] [cursor=pointer]
+                          - generic [ref=e3058]: 需求页范例
+                      - button "范例" [ref=e3063]
+                      - generic [ref=e3071]: "2"
+                      - button "完成" [ref=e3077]
+                      - button [ref=e3088]
+                      - button [ref=e3091]
+                      - button [ref=e3094]
+                    - generic [ref=e3098]:
+                      - button [ref=e3101]
+                      - button [ref=e3107]
+                      - generic [ref=e3108]: "1"
+                      - button "未开始" [ref=e3114]
+                      - button [ref=e3125]
+                      - button [ref=e3128]
+                      - button [ref=e3131]
+              - generic [ref=e3134]:
+                - generic [ref=e3137]:
+                  - generic [ref=e3138]: 玩家
+                  - generic [ref=e3144]:
+                    - button "Filter" [ref=e3148] [cursor=pointer]
+                    - button "Sort" [ref=e3154] [cursor=pointer]
+                    - button "Search" [ref=e3158] [cursor=pointer]
+                - generic [ref=e3167]:
+                  - generic [ref=e3174]:
+                    - button "名称" [disabled] [ref=e3178]
+                    - button "类型" [disabled] [ref=e3191]
+                    - button "ID" [disabled] [ref=e3204]
+                    - button "状态" [disabled] [ref=e3217]
+                    - button "优先级" [disabled] [ref=e3230]
+                    - button "阶段" [disabled] [ref=e3243]
+                    - button "DDL" [disabled] [ref=e3256]
+                  - button "Edit groups" [ref=e3270] [cursor=pointer]
+              - generic [ref=e3274]:
+                - generic [ref=e3277]:
+                  - generic [ref=e3281]:
+                    - generic [ref=e3282]: 方块分类（全部旋转锁定）
+                    - button "Collection actions" [ref=e4931] [cursor=pointer]
+                  - generic [ref=e3284]:
+                    - button "Filter" [ref=e3288] [cursor=pointer]
+                    - button "Sort" [ref=e3294] [cursor=pointer]
+                    - button "Search" [ref=e3298] [cursor=pointer]
+                - generic [ref=e3307]:
+                  - generic [ref=e3314]:
+                    - button "名称" [disabled] [ref=e3318]
+                    - button "类型" [disabled] [ref=e3331]
+                    - button "ID" [disabled] [ref=e3344]
+                    - button "状态" [disabled] [ref=e3357]
+                    - button "优先级" [disabled] [ref=e3370]
+                    - button "阶段" [disabled] [ref=e3383]
+                    - button "DDL" [disabled] [ref=e3396]
+                    - button "备注" [disabled] [ref=e3409]
+                  - button "Edit groups" [ref=e3423] [cursor=pointer]
+              - generic [ref=e3427]:
+                - generic [ref=e3430]:
+                  - generic [ref=e3431]: 方块属性
+                  - generic [ref=e3437]:
+                    - button "Filter" [ref=e3441] [cursor=pointer]
+                    - button "Sort" [ref=e3447] [cursor=pointer]
+                    - button "Search" [ref=e3451] [cursor=pointer]
+                - generic [ref=e3460]:
+                  - generic [ref=e3467]:
+                    - button "名称" [disabled] [ref=e3471]
+                    - button "类型" [disabled] [ref=e3484]
+                    - button "ID" [disabled] [ref=e3497]
+                    - button "状态" [disabled] [ref=e3510]
+                    - button "优先级" [disabled] [ref=e3523]
+                    - button "阶段" [disabled] [ref=e3536]
+                    - button "DDL" [disabled] [ref=e3549]
+                    - button "文本" [disabled] [ref=e3562]
+                  - button "Edit groups" [ref=e3576] [cursor=pointer]
+              - generic [ref=e3580]:
+                - generic [ref=e3583]:
+                  - generic [ref=e3584]: 颜色系统
+                  - generic [ref=e3590]:
+                    - button "Filter" [ref=e3594] [cursor=pointer]
+                    - button "Sort" [ref=e3600] [cursor=pointer]
+                    - button "Search" [ref=e3604] [cursor=pointer]
+                - generic [ref=e3613]:
+                  - generic [ref=e3620]:
+                    - button "名称" [disabled] [ref=e3624]
+                    - button "类型" [disabled] [ref=e3637]
+                    - button "ID" [disabled] [ref=e3650]
+                    - button "状态" [disabled] [ref=e3663]
+                    - button "优先级" [disabled] [ref=e3676]
+                    - button "阶段" [disabled] [ref=e3689]
+                    - button "DDL" [disabled] [ref=e3702]
+                  - button "Edit groups" [ref=e3716] [cursor=pointer]
+              - generic [ref=e3720]:
+                - generic [ref=e3723]:
+                  - generic [ref=e3724]: 魔力种子
+                  - generic [ref=e3730]:
+                    - button "Filter" [ref=e3734] [cursor=pointer]
+                    - button "Sort" [ref=e3740] [cursor=pointer]
+                    - button "Search" [ref=e3744] [cursor=pointer]
+                - generic [ref=e3753]:
+                  - generic [ref=e3760]:
+                    - button "名称" [disabled] [ref=e3764]
+                    - button "类型" [disabled] [ref=e3777]
+                    - button "ID" [disabled] [ref=e3790]
+                    - button "状态" [disabled] [ref=e3803]
+                    - button "优先级" [disabled] [ref=e3816]
+                    - button "阶段" [disabled] [ref=e3829]
+                    - button "DDL" [disabled] [ref=e3842]
+                  - button "Edit groups" [ref=e3856] [cursor=pointer]
+              - generic [ref=e3860]:
+                - generic [ref=e3863]:
+                  - generic [ref=e3864]: 魔法反应
+                  - generic [ref=e3870]:
+                    - button "Filter" [ref=e3874] [cursor=pointer]
+                    - button "Sort" [ref=e3880] [cursor=pointer]
+                    - button "Search" [ref=e3884] [cursor=pointer]
+                - generic [ref=e3893]:
+                  - generic [ref=e3900]:
+                    - button "名称" [disabled] [ref=e3904]
+                    - button "类型" [disabled] [ref=e3917]
+                    - button "ID" [disabled] [ref=e3930]
+                    - button "状态" [disabled] [ref=e3943]
+                    - button "优先级" [disabled] [ref=e3956]
+                    - button "阶段" [disabled] [ref=e3969]
+                    - button "DDL" [disabled] [ref=e3982]
+                  - button "Edit groups" [ref=e3996] [cursor=pointer]
+              - generic [ref=e4000]:
+                - generic [ref=e4003]:
+                  - generic [ref=e4004]: hud
+                  - generic [ref=e4010]:
+                    - button "Filter" [ref=e4014] [cursor=pointer]
+                    - button "Sort" [ref=e4020] [cursor=pointer]
+                    - button "Search" [ref=e4024] [cursor=pointer]
+                - generic [ref=e4033]:
+                  - generic [ref=e4040]:
+                    - button "名称" [disabled] [ref=e4044]
+                    - button "类型" [disabled] [ref=e4057]
+                    - button "ID" [disabled] [ref=e4070]
+                    - button "状态" [disabled] [ref=e4083]
+                    - button "优先级" [disabled] [ref=e4096]
+                    - button "阶段" [disabled] [ref=e4109]
+                    - button "DDL" [disabled] [ref=e4122]
+                  - button "Edit groups" [ref=e4136] [cursor=pointer]
+              - generic [ref=e4140]:
+                - generic [ref=e4143]:
+                  - generic [ref=e4144]: 编辑器
+                  - generic [ref=e4150]:
+                    - button "Filter" [ref=e4154] [cursor=pointer]
+                    - button "Sort" [ref=e4160] [cursor=pointer]
+                    - button "Search" [ref=e4164] [cursor=pointer]
+                - generic [ref=e4173]:
+                  - generic [ref=e4180]:
+                    - button "名称" [disabled] [ref=e4184]
+                    - button "类型" [disabled] [ref=e4197]
+                    - button "ID" [disabled] [ref=e4210]
+                    - button "状态" [disabled] [ref=e4223]
+                    - button "优先级" [disabled] [ref=e4236]
+                    - button "阶段" [disabled] [ref=e4249]
+                    - button "DDL" [disabled] [ref=e4262]
+                  - button "Edit groups" [ref=e4276] [cursor=pointer]
+              - generic [ref=e4280]:
+                - generic [ref=e4283]:
+                  - generic [ref=e4284]: 关卡
+                  - generic [ref=e4290]:
+                    - button "Filter" [ref=e4294] [cursor=pointer]
+                    - button "Sort" [ref=e4300] [cursor=pointer]
+                    - button "Search" [ref=e4304] [cursor=pointer]
+                - generic [ref=e4313]:
+                  - generic [ref=e4320]:
+                    - button "名称" [disabled] [ref=e4324]
+                    - button "类型" [disabled] [ref=e4337]
+                    - button "ID" [disabled] [ref=e4350]
+                    - button "状态" [disabled] [ref=e4363]
+                    - button "优先级" [disabled] [ref=e4376]
+                    - button "阶段" [disabled] [ref=e4389]
+                    - button "DDL" [disabled] [ref=e4402]
+                  - button "Edit groups" [ref=e4416] [cursor=pointer]
+              - generic [ref=e4420]:
+                - generic [ref=e4423]:
+                  - generic [ref=e4424]: 菜单
+                  - generic [ref=e4430]:
+                    - button "Filter" [ref=e4434] [cursor=pointer]
+                    - button "Sort" [ref=e4440] [cursor=pointer]
+                    - button "Search" [ref=e4444] [cursor=pointer]
+                - generic [ref=e4453]:
+                  - generic [ref=e4460]:
+                    - button "名称" [disabled] [ref=e4464]
+                    - button "类型" [disabled] [ref=e4477]
+                    - button "ID" [disabled] [ref=e4490]
+                    - button "状态" [disabled] [ref=e4503]
+                    - button "优先级" [disabled] [ref=e4516]
+                    - button "阶段" [disabled] [ref=e4529]
+                    - button "DDL" [disabled] [ref=e4542]
+                  - button "Edit groups" [ref=e4556] [cursor=pointer]
+              - generic [ref=e4560]:
+                - generic [ref=e4563]:
+                  - generic [ref=e4564]: 视觉效果
+                  - generic [ref=e4570]:
+                    - button "Filter" [ref=e4574] [cursor=pointer]
+                    - button "Sort" [ref=e4580] [cursor=pointer]
+                    - button "Search" [ref=e4584] [cursor=pointer]
+                - generic [ref=e4593]:
+                  - generic [ref=e4600]:
+                    - button "名称" [disabled] [ref=e4604]
+                    - button "类型" [disabled] [ref=e4617]
+                    - button "ID" [disabled] [ref=e4630]
+                    - button "状态" [disabled] [ref=e4643]
+                    - button "优先级" [disabled] [ref=e4656]
+                    - button "阶段" [disabled] [ref=e4669]
+                    - button "DDL" [disabled] [ref=e4682]
+                  - button "Edit groups" [ref=e4696] [cursor=pointer]
+              - generic [ref=e4700]:
+                - generic [ref=e4703]:
+                  - generic [ref=e4704]: 当前版本验收标准
+                  - generic [ref=e4710]:
+                    - button "Filter" [ref=e4714] [cursor=pointer]
+                    - button "Sort" [ref=e4720] [cursor=pointer]
+                    - button "Search" [ref=e4724] [cursor=pointer]
+                - generic [ref=e4733]:
+                  - generic [ref=e4740]:
+                    - button "名称" [disabled] [ref=e4744]
+                    - button "类型" [disabled] [ref=e4757]
+                    - button "ID" [disabled] [ref=e4770]
+                    - button "状态" [disabled] [ref=e4783]
+                    - button "优先级" [disabled] [ref=e4796]
+                    - button "阶段" [disabled] [ref=e4809]
+                    - button "DDL" [disabled] [ref=e4822]
+                  - button "Edit groups" [ref=e4836] [cursor=pointer]
+              - link "需求页范例 (1)" [ref=e4842] [cursor=pointer]:
+                - /url: /p/1-3f381b68bccf800e979ae544a889c39f?pvs=25
+              - table [ref=e4870]:
+                - rowgroup [ref=e4871]:
+                  - row [ref=e4872]:
+                    - cell [ref=e4873]
+                    - cell [ref=e4876]
+                    - cell [ref=e4879]
+                  - row [ref=e4882]:
+                    - cell [ref=e4883]
+                    - cell [ref=e4886]
+                    - cell [ref=e4889]
+                  - row [ref=e4892]:
+                    - cell [ref=e4893]
+                    - cell [ref=e4896]
+                    - cell [ref=e4899]
+                  - row [ref=e4902]:
+                    - cell [ref=e4903]
+                    - cell [ref=e4906]
+                    - cell [ref=e4909]
+              - link "New page" [ref=e4915] [cursor=pointer]:
+                - /url: /p/3f381b68bccf8081b0f0e537bae53e27?pvs=25
+        - region [aria-hidden] [ref=e4927]
+    - status [ref=e2742]
+    - alert [ref=e2743]
+  - iframe [aria-hidden] [ref=e2744]

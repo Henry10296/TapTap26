@@ -3,18 +3,20 @@ using UnityEngine;
 
 namespace TapCom.Gameplay
 {
-    /// <summary>关卡装载完成事件：Presentation（LevelActorBinder）据此生成表现物。</summary>
+    /// <summary>关卡装载完成事件：Presentation（LevelActorBinder/BackgroundLayerLoader）据此生成表现物。携带源 LevelData（背景层等非 Cell 数据随事件到达）。</summary>
     public readonly struct LevelLoadedEvent
     {
         public readonly string WorldId;
         public readonly WorldGrid World;
         public readonly Vector3Int SpawnPoint;
+        public readonly LevelData Data;
 
-        public LevelLoadedEvent(string worldId, WorldGrid world, Vector3Int spawnPoint)
+        public LevelLoadedEvent(string worldId, WorldGrid world, Vector3Int spawnPoint, LevelData data)
         {
             WorldId = worldId;
             World = world;
             SpawnPoint = spawnPoint;
+            Data = data;
         }
     }
 
@@ -93,7 +95,7 @@ namespace TapCom.Gameplay
 
             var world = LevelLoader.Load(_worlds, worldId, data);
             CurrentWorldId = worldId;
-            _bus.Publish(new LevelLoadedEvent(worldId, world, data.SpawnPoint));
+            _bus.Publish(new LevelLoadedEvent(worldId, world, data.SpawnPoint, data));
             _game.TrySetState(GameState.Playing);
             return world;
         }

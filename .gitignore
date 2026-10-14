@@ -56,6 +56,9 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
+# Wwise generated sound banks (Wwise 源工程在仓库外，bank 产物可重新生成，不进版本库)
+/[Aa]ssets/[Ss]treaming[Aa]ssets/[Aa]udio/[Gg]enerated[Ss]ound[Bb]anks/
+
 # Plastic SCM
 *.ignore
 *.merge
@@ -63,3 +66,6 @@ crashlytics-build.properties
 # OS
 Thumbs.db
 .DS_Store
+
+# AI tool junk
+.playwright-mcp/

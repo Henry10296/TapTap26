@@ -343,3 +343,5 @@ MonoBehaviour:
     Gravity: 1
     Magic: 0
     Locked: 1
+  SpawnPoint: {x: 0, y: 0, z: 0}
+  BackgroundLayers: []

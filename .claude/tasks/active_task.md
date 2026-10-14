@@ -3,7 +3,7 @@
 > 跨会话状态锚点。换会话第一动作 = 读本文件接管，不靠记忆、不靠前序对话。
 > 有 Edit/Write 的轮次，结束前必须先回写本文件（Stop hook 强制）。
 >
-> **当前任务：TASK-003-角色模块Player（见文末）**。TASK-001/002 已完结，留作归档记录。
+> **当前任务：TASK-014-投掷体验三改+幽灵方块修复（见文末）**。TASK-001~013 已完结/前序待验收，留作归档记录。
 
 ---
 
@@ -529,36 +529,210 @@ Core 运行框架：GameManager（GameState 状态机 + Service 容器）、Tick
 
 ## Task ID: TASK-013-音频模块（骨架 + mock 后端）
 
-**Status: DESIGN（Design 已落盘待用户审；审过才 Coding）**
+**Status: CODING（代码已落盘，编译与声音验收待用户）**
 
 ## 目标
 
-用户指令（2026-10-11）：「做音频系统，我们使用 wise（Wwise），用事件来通知播放，先做这个模块」。Intake 三拍板（AskUser 全选推荐项）：① 骨架先行 + mock 后端（Wwise 装好后只补真实后端）② 订阅现有游戏事件（逻辑层零改动）③ 范围 = 骨架 + 投掷/施法/游戏状态三类接点。
+用户指令（2026-10-11）：「做音频系统，我们使用 wise（Wwise），用事件来通知播放，先做这个模块」。Intake 三拍板（AskUser 全选推荐项）：① 骨架先行 + mock 后端 ② 订阅现有游戏事件 ③ 范围 = 骨架 + 投掷/施法/游戏状态三类接点。**2026-10-12 增量拍板（Design 待审期用户自行导入 Wwise）**：真实 Wwise 后端替代 mock；组件路线废弃（.wproj 不在本机）；bank 仅 Play_BGM/Stop_BGM → 映射缩水；用户「写」授权落码。
 
 ## Design
 
-`docs/design/TASK-013-audio-design.md`（变量注册表 + 3 订阅契约 + IAudioBackend 单方法接口 + AudioCatalog 六声音 ID + Invariants 4 条 + 验收 7 项 + 拆解 4 步）。要点：
-- 新目录 `Script/Presentation/Audio/`，namespace `TapCom.Presentation`；AudioManager 纯 C# class（对齐 MagicCircuitSimulator 惯例，不占 TickManager）
-- 声音 ID 对齐 Wwise Event 命名（Play_Throw / Play_Spell_* / Music_Title / Music_Game），将来 Wwise 工程 Event 同名透传零改
-- 唯一新增 public 接口 = `IAudioBackend.Play(string)`；换 Wwise = 新实现类 + 装配行换一词
-- 非目标：不装 Wwise、不接 CellWorldChangedEvent、不做 CSV 音频表、不产任何资产（全部记 OQ/另任务）
+`docs/design/TASK-013-audio-design.md`（§1-8 原案 + **§9 Coding 期增量**：后端换 WwiseAudioBackend、映射缩到 bank 两事件、bank 代码加载、null GO 全局声、PlayerInventory 试验行清理、验收 5 项更新）。
 
 ## 本轮证据链（2026-10-11）
 
 - Wwise 未集成：manifest.json 无 Audiokinetic 包 + 全项目 Glob Ak*/Wwise 零命中｜已核验（实读 + Glob）
 - 事件接点实证：SeedThrownEvent=PlayerThrower.cs:69、SpellCastEvent=MagicCircuitSimulator.cs:372、GameStateChangedEvent=GameManager.cs:82（拒绝路径不 Publish，:74-77）｜已核验（grep 五处 Publish）
 - EventBus 形态：实例 class、Subscribe/Unsubscribe 多播快照遍历、随 Play 轮次重建无需退订（EventBus.cs:10 注释 + :17-49 实读）；Services 门面 Container/EventBus（Services.cs 实读）；装配点 CoreDriver.Awake（CoreBootstrap.cs:39-68 实读）
-- **并行线活动实证**：CellWorldChangedEvent.MoverId 字段在本会话两次读取之间被并行线加进 GameEvents.cs:70（首次读无、grep 有）——并行会话活跃，Coding 前须实时 grep 事件定义再写；本任务订阅的 3 事件只读既有字段不受影响｜已核验（两次实读对照）；active_task.md 本轮两次 Edit 均遇并行写入需重读后追加（同证）
+
+## 本轮证据链（2026-10-12，Wwise 调试 + Coding 落盘）
+
+- **用户导入 Wwise 集成 2024.1.17**（NewVersion.txt）+ 生成 bank 到 StreamingAssets 标准位（Init/Main.bnk，Play_BGM+Stop_BGM 两 event，Main.txt:2-3）｜已核验（find + Main.txt 实读）
+- **「Event ID not found」根因链锤死**：Main.bnk 无人加载（Wwise 只自动加载 Init.bnk；引擎 initialized successfully 但业务 bank 不在内存）→ 曾误指 AkBankLoader（该组件 2024.1 已移除，find 零命中，**已向用户更正**）；2024.1 替代组件 AkBank 需 Wwise Picker 选 bank，而 **.wproj 不在本机**（Documents/Desktop/D 盘/OneDrive/注册表/ProgramData 全搜零命中）→ Picker 永远空 → 组件路线物理堵死｜已核验（源码 find + 集成 SettingsProvider 入口 AkWwiseEditorSettings.cs:325 实读）
+- 期间一个**可选工具误触**：用户点了 `Wwise > Install Addressables`（AddressableInstaller.cs:190）报 WwiseApplicationPath 未设——本项目 bank 走 StreamingAssets，Addressables 接入不需要，跳过｜已核验（源码实读）
+- **API 锚点全锤**：`AkSoundEngine.IsInitialized()`（Generated/Windows:167）/ `AkBankManager.LoadBank(string,bool,bool)`（AkBankManager.cs:105，public static 全局类）/ `PostEvent(string, GameObject)`（AkUnitySoundEngine.cs:452；null GO → InternalGameObjectHash 返回 AK_INVALID_GAME_OBJECT，:65-68；PreGameObjectAPICallUserHook 空 partial no-op）/ `AK_INVALID_PLAYING_ID`（AkUnitySoundEngine 类常量）/ `AKRESULT.AK_Success`（AKRESULT.cs:15）｜已核验（逐处实读）
+- **落盘 4 文件**：新 `Script/Presentation/Audio/{AudioBackend,AudioManager}.cs`（IAudioBackend 收口 + WwiseAudioBackend bank 首播前自动 LoadBank + null GO 全局声；AudioCatalog 两常量 Play_BGM/Stop_BGM + 投掷/配方映射留位返回 null；AudioManager 订阅 3 事件随 Play 轮次存活）；改 CoreBootstrap.cs（+using TapCom.Presentation +装配 2 行 + ready 日志串加 AudioManager）；改 PlayerInventory.cs（**清用户试验行** `AkSoundEngine.PostEvent("Stop_BGM",...)` + using AK.Wwise，TryConsume 恢复原样）｜已核验（Write/Edit 成功；**未编译**）
+- **编译错误 #1 修复**（用户贴 CS0019 AudioBackend.cs(39,21)）：初版用 `AkBankManager.LoadBank(string,bool,bool)` 判 `AKRESULT`——**签名里 `public static uint` 返回类型看漏**（锤签名时只核了参数列表）；实读 AkBankManager.cs:103-129 确认其 uint 返回 = bank handle ID（已加载时返回 AK_INVALID_UNIQUE_ID）非错误码 → 改用 SDK 层 `AkSoundEngine.LoadBank(BankName, out _)`（Generated/Windows:527，返回 AKRESULT）｜已核验（实现实读 + Edit 成功；待复编译）
+- **2026-10-12 复编译运行：链路全通、null GO 被 runtime 证伪**——用户日志实证：编译过 ✓、ready 含 AudioManager ✓、`[Audio] bank loaded: Main` ✓、`play Play_BGM (playingId=2)` ✓、Event ID not found 绝迹 ✓；但 `PostEvent(id, null)` 触发 `Unknown/Dead game object ID used in PostEvent` monitor 错误——**设计期「INVALID_GAME_OBJECT 是合法 Post 目标」的 inference 被运行时证伪**（SDK 返回 playingId 但 monitor 拒声）。修复：WwiseAudioBackend 自建常驻发射器 `WwiseAudioBackendEmitter`（DontDestroyOnLoad + AkGameObj 组件自动注册——AkGameObj.cs:113 RegisterGameObj 同步 + :169 引擎晚初始化兜底委托，全局命名空间实读）→ PostEvent 改传 _emitter｜已核验（用户贴日志 + AkGameObj 源码实读 + Edit 成功；**待复编译复测出声**）
+- 验收路径更新见 design §9：进 Playing 应见 `[Audio] bank loaded: Main` + `play Play_BGM` + 听到 BGM；Esc 见 `play Stop_BGM`；全 Console 零 Event ID not found（唯一 Post 源 = 本模块）
+- 提醒用户：编辑器失焦自动静音（AkWwiseInitializationSettings m_SuspendAudioDuringFocusLoss:1，日志 Audio thread suspended 实证）——验收时保持 Unity 窗口聚焦
 
 ## Open Questions
 
 - CellWorldChangedEvent（落格/消失声）是否接（高频声源未拍板）；Victory/Defeat/Paused 状态音 M3 后接
-- Wwise 集成包版本与安装（用户人工）→ 真实 WwiseAudioBackend 另任务
+- bank 扩充（Wwise 工程加 Play_Throw/Play_Spell_* 后重新生成）→ AudioCatalog 填常量即通（另任务，需 .wproj 所在环境）
 - CSV 音频表另任务（AudioCatalog 即未来表雏形）
+- [继承] player spawned (1064.50, 560.50) 坐标可疑（像素量级，2026-10-11 日志发现，非音频面）——待用户确认 Level_01 出生点
 
 ## Next Steps
 
-1. 用户审 Design → 拍板后 Coding（2 新文件 + CoreBootstrap +2 行）。
-2. 编译 + §5 验收 7 项（mock 日志自证，可与多线共享编译）。
+1. 用户聚焦 Unity → 编译（多线共享）。
+2. Play：标题 → 点开始 → **听到 BGM** + `[Audio] bank loaded: Main` + `play Play_BGM`；Esc → BGM 停 + `play Stop_BGM`；Console 零 Event ID not found。
+3. 过了 → 音频 M1 闭环完成；投掷/配方音效等 bank 扩充后填 AudioCatalog 常量（改动 1 行）。
+
+### 2026-10-12~13 追记（无 listener 诊断 → bank 扩充 → AudioCatalog 接通）
+
+- **「PostEvent 成功但无声」第一层根因 = 全场景 0 个 AkAudioListener**：grep Scenes 零命中 → 发射器无听众无处输出（AkGameObj.cs:207 `m_listeners.Init` / AkAudioListener.DefaultListeners 机制实读）。修法（人工）：两个场景 Main Camera 各挂 AkAudioListener（RequireComponent 自动带 AkGameObj）→ 场景 YAML GUID 实证已挂｜已核验
+- **第二层根因（最强嫌疑待一锤）= Play_BGM 是 Status switch 驱动的 Music Switch Container**（Main.json 实读：事件引用 SwitchGroup "Status"，Badly_status/status_Switch 两值；Main.txt 媒体在 Interactive Music Hierarchy\music\Combat\BGM\music1|music2）+ 全代码 grep SetSwitch 零命中 → 容器选不到播放路径 = 静音零报错。两修法：A=Wwise 事件内嵌 SetSwitch（用户侧，无从 bank JSON 判断是否已做，需耳朵验收）；B=AudioBackend 加 1 行 SetSwitch（等用户发话）｜已核验（bank 结构 + 源码）
+- Editor.log 取证方法沉淀：`%LOCALAPPDATA%\Unity\Editor\Editor.log` 可直接 grep（[Audio]/WwiseMonitor/Unknown/Dead/suspended 全在里面），比要用户贴 Console 快；日志只证 Post 成功，**听觉确认归用户**（日志证不了出声）
+- `m_SuspendAudioDuringFocusLoss` 实锤：Unity 失焦即 `Audio thread suspended. Audio output will be silent.`，回焦 resumed —— 用户切窗口频繁，验收必须保持聚焦
+- 豆包（外部 AI）测试脚本评估结论：逻辑可用，但**挂载物体必须 Wwise 注册**（带 AkGameObj）——PostEvent(string,GO) 只做 GetAkGameObjectID + PreGameObjectAPICall，后者空 no-op（AkUnitySoundEngine.cs:196-209），纯空物体 = Unknown/Dead 静音同款；正确挂法 = Main Camera。脚本尚未进项目（Glob 零命中）
+- **2026-10-12 22:18 bank 大扩充（用户重新生成，10-13 15:10 导入）：3 → 27 事件**（Magic_Static/LowGravity/Attract/Explode、Seed_Throw/Trigger/Switch/Land/Aim(+Stop)、Player_Jump/Walk(+Stop)/FastFall/Land/Crushed、Rock_Land/Fall/Crumble、UI_Click、Level_Failed/Reset/Complete、Ambient_Ruin(+Stop) 双 Reverb Infinite、Play_Player_Crushed）Main.bnk 23.7MB 全 Memory｜已核验（Main.txt/Main.json 实读 + python 解析）
+- **AudioCatalog 接通两处零风险映射（2026-10-13 用户「你先填上」授权）**：SeedThrown→Play_Seed_Throw（新 const SeedThrow）；SpellCast 按 SpellType switch——Zero→Play_Magic_LowGravity / Blast→Play_Magic_Explode / Attract→Play_Magic_Attract / Static→Play_Magic_Static（GameEvents.cs:15-21 枚举实读对齐）；类头注释同步更新｜已核验（Edit 成功；**未编译**）
+- 剩余无游戏事件的音效（跳跃/脚步循环/瞄准循环/落格/UI/关卡状态/环境）需要新事件发布或 M3 状态——**设计增量另做，不顺手塞**（用户已认可分批）
+- 2026-10-13｜**AudioCatalog 两映射已填**（用户「你先填上」授权）：SeedThrown→Play_Seed_Throw；SpellCast switch 四配方（Zero→Magic_LowGravity/Blast→Magic_Explode/Attract→Magic_Attract/Static→Magic_Static）+类头注释更新｜已核验（Edit 成功；未编译，验收=扔种子/触发配方听声）
+- 2026-10-13｜**「BGM 约 15 秒自己停」根因 = Play_BGM 是 OneShot 非循环**（Main.json：DurationType OneShot 15.36s；对照同包 Ambient_Ruin=Infinite）→ 修法在 Wwise 侧给音乐容器/段落开 Loop ∞ 重新生成；**自证信号 = 新 Main.json 里 Play_BGM DurationType 变 Infinite**（不用进游戏）｜已核验（bank JSON 实读）
+- 2026-10-13｜**bank 产物不进 git（用户指令「音频资源不进git」）**：.gitignore:60 加 `/[Aa]ssets/[Ss]treaming[Aa]ssets/[Aa]udio/[Gg]enerated[Ss]ound[Bb]anks/`（对齐 Arts 先例）；check-ignore 实证 Main.bnk/English(US) 命中、三层文件夹 .meta 命中否定规则保留可追踪（ls-files 尚未 track，随下次 add 进库）。代价：新 clone 无声，需重新生成/拷 bank——用户拍板接受｜已核验（git status/check-ignore 实测）
+- 2026-10-14｜`.playwright-mcp/` 加 gitignore（用户指令，工具垃圾目录）+ 工作区归因：Changes 混杂 = 最后 commit（10-11 20:03）后 A 音频线/B 玩法线（10-13 瞄准即定色+弹道终于指针，另一会话）/C 杂物三线未提交堆积，已给分两个 commit 建议，待用户拍板｜已核验（git diff/status 实测）
 
 ---
+
+---
+
+## Task ID: TASK-014-投掷体验三改+幽灵方块修复
+
+**Status: CODING（代码已落盘，编译与 Play 验收待用户）**
+
+## 目标（2026-10-13 用户需求单）
+
+新需求：①准备投掷显示对应种子图 ②投掷线点数可调 + 线始终在指针上。Bug：①魔法反应后范围内预放方块被种子穿过 ②预放方块吞投掷物/部分穿过 ③蓄能预备效果有时不显示直接反应。
+
+## 拍板（AskUser 三项全选推荐项）
+
+①「瞄准即定色」（AimHeld 上升沿掷定 CurrentSeedType，投出即显示那颗）②「弹道终于指针」（解初速穿指针，ThrowSpeed 退为回退值）③吞种子「直接修先扣后校验」。
+
+## 本轮证据链（2026-10-13）
+
+- **幽灵方块根因锤死（bug1+bug2「穿过」同根）**：Zero/Attract/Static/Blast 对初始格发 Removed(MoverId=0)/Changed（RemoveDictCell 默认 moverId=0）；CircuitView.Removed 初始格分支只处理 MoverId≠0（CircuitView.cs:96）；LevelActorBinder 只订 LevelLoadedEvent → 数据出字典（Ballistics 只查字典）而 CellActor+BoxCollider2D（Used By Composite）滞留——看得见、玩家仍碰撞、种子穿过。「范围」=配方直径 Zero5/Blast7/Attract9/Static5（MagicParams.cs:30-39）｜已核验（源码实读链）
+- **隧穿排除**：VelCapY 20.3125 × TickDt 1/120 ≈ 0.169 格/步 << 1 格+2×half，逐轴移动跳不了格 → 穿过唯一机制=格不在字典（幽灵）｜已核验（参数实读+推算）
+- **bug3 根因（推断，高置信）**：Cast 只从 StepPendingCasts 触发、ChargeTime 恒 0.5s → 0 秒反应不可能；白块与方块全部 z=0 同 sortingOrder → Unity 排序未定义「有时」白块被盖｜推断（修复后需验收）
+- **吞种子嫌疑1锤在代码层**：PlayerThrower 先 TryConsume（原 :68）后 Publish，模拟器拒投不返还 → 贴墙/天花板白扣；嫌疑2（snap blocked 滑停出界）待复现日志分辨｜已核验（代码链）
+- **相机锚点**：Game.unity Main Camera z=-10（:487）→ planeDistance 换算无镜像；orthographic:0（:461）只影响缩放表现｜已核验（场景 YAML）
+- **落盘 8 文件**：GameEvents（SeedThrownEvent+Target）；Ballistics（+TryScanMuzzle 出手口扫描共用、+SolveThrowVelocity 解初速——可解条件 Dot(delta,n)·dir.x<0 目标在射线下垂侧，否则回退 ThrowSpeed）；MagicCircuitSimulator（OnSeedThrown 改调两共用函数）；PlayerThrower（+CurrentSeedType 瞄准上升沿掷定/投出后重掷、TryConsume 前预检拒投不扣、事件带 Target）；LevelActorBinder（+订 CellWorldChangedEvent：Removed(MoverId=0) 销毁 + Changed 重绑换图，顺带修引力转岩石初始格不换皮）；CircuitView（NewSquare+sortingOrder 参数，蓄能白块 order=10）；TrajectoryPreview（DotCount→[SerializeField]_dotCount、AimDirection→AimWorldPoint、初速改 SolveThrowVelocity、扫描改 TryScanMuzzle）；新建 Presentation/Character/SeedIndicator.cs（AimHeld 显隐读 CurrentSeedType，3 贴图槽）｜已核验（Write/Edit 成功；**未编译**）
+- C# 自查：实例字段初始化器不能引用实例字段（CS0236）→ _dots 改 Start 建池；readonly 不能在方法内赋值（CS0191）→ 去 readonly｜已核验（语言规则）
+- **编译错误 #1 修复（用户贴 CS0103 PlayerThrower.cs:83 + CS0177 :113）**：①漏加 `using TapCom.MagicCircuit`（Ballistics 引用；Gameplay→MagicCircuit 有 PlayerMotor.cs:2 先例，落码时 usings 只保留了 Core+UnityEngine）②TryGetWorld 里 `id != null && _worlds.TryGet(id, out world)` 短路使 id==null 分支 out 未赋值 → 首行补 `world = null`｜已核验（Edit 成功；待复编译）
+- **解算器 v1 是 no-op（用户反馈「抛物线的终点是鼠标啊」证伪）**：v1 固定方向解速率，而调用方 dir 恒 = normalize(target-origin) → delta∥dir → Dot(delta,n)≡0 → 恒触发回退 = 实际行为与旧固定速度完全一致，终点从不在指针上｜已核验（数学：delta=k·d ⇒ d·n=0）
+- **解算器 v2（角度制）落盘**：固定 ThrowSpeed 解低弧（直接）弹道角 tanθ=(s²-√D)/(g·x)，初速方向略抬过指针射线、靠重力下垂终到指针；超出固定速度射程（判别式 s⁴-2gy·s²-g²x²<0）抬到最低可达速度 s²=g(y+√(x²+y²))；x 取 1e-3 下限防除零（x→0 极限=竖直投掷，数值验证 竖直下抛 tanθ≈-3938→θ≈-90° ✓、(16,0) 远目标抬速 s≈19.4 45° 恰达 ✓）｜已核验（Edit 成功 + 手算边界；待复编译 Play）
+- 边界①作废重写：on-ray/水平正对/朝上目标 v2 均可解（角度制天然覆盖）；**新边界 = 极远目标 x 分量被 VelCapX 钳制略短**（预览与真实同钳制，一致偏差）｜inference（待 Play）
+- **v2 后新症状修复（用户「还是不对，起点头顶终点鼠标」）**：弧线已过指针但预览画固定 96 点×0.0125s≈1.2s 时窗，近目标 t*≈0.3s → 线穿过指针继续延伸 ~0.9s，视觉终点≠指针｜已核验（时窗 vs t* 推算）。修复：点列进度 Vector2.Dot(pos-start, along) ≥ |aimWorld-start| 即把末点钉在指针收尾（TrajectoryPreview.Update）｜已核验（Edit 成功；待复编译 Play）
+- 语义挂账（未动，待用户拍板）：①指针悬空时线止于指针、但真实种子飞过指针继续飞到撞格为止（着地规则不改）②线起点 = 出手口（头顶前 ~0.9 格，原型同款真实出生点）；要从头顶画起可补直线 stub，未授权不动
+- **已知边界（拍板内）**：①指针在抛射线正上/水平正对（on-ray）解算无解回退固定速度，线终点在指针下方 ②超远目标被 VelCap 钳制打不到 ③预览不含玩家 vx 继承（原状）④同帧竞态预检过了模拟器仍可能拒（极窄，以模拟器日志为准）｜inference
+
+## 人工配置步骤（全部 Unity 手动）
+
+1. Player.prefab：Player 根下建子物体 `SeedIndicator`（建议 ThrowPoint 上方）→ Add Component: Sprite Renderer + SeedIndicator → 三槽拖贴图（与 CircuitView 同三张）；SpriteRenderer Sorting Order ≥1（压过角色）、scale ≈0.375（与飞行种子同观感）
+2. Player.prefab 的 TrajectoryPreview 出现 `_dotCount`（默认 96），可调；改值重进 Play 生效
+
+## 验收清单
+
+1. 幽灵方块：预放结构被 Zero 消/Blast 炸三块 → 贴图立即消失、种子不再穿过；Attract 三块转岩石后贴图变岩石
+2. 蓄能高亮：三连形成每次都见白块 ~0.5s（多位置反复验证「有时」已修）
+3. 点数可调：改 _dotCount 重进 Play 生效
+4. 弹道终于指针：射线下方目标线终于指针、落点=指针；水平正对/朝上回退固定速度（已知边界①）
+5. 吞种子：贴墙/低天花板投掷 → Console `[PlayerThrower] throw blocked` 且库存不减
+6. 种子显示：按住右键头顶出图、颜色=投出色；投出后立刻换下一颗
+7. 回归：投掷落格/配方/引力/爆炸/静止不回退（OnSeedThrown 为等价重构+新弹道）
+
+## Open Questions
+
+- 「吞」修后仍复现 → 看 Console `snap blocked`/`seed lost`（嫌疑2：贴合滑停出界）
+- SeedIndicator 层级/观感（flipX 不影响，已用 SpriteRenderer 独立开关）待验收
+- 边界①若验收不满意 → 备选解角度制（固定速度双解取低弧），只换 SolveThrowVelocity 一个函数，调用点不动
+
+## Next Steps
+
+1. 用户聚焦 Unity → 编译 → 按「人工配置步骤」配 Player.prefab → Play 过验收清单 7 项。
+
+---
+
+## Task ID: TASK-014-Notion策划案同步工作流（首跑）
+
+**Status: RESEARCH-DONE（首跑已通，skill 固化待用户确认）**——用户 2026-10-13 拍板「先跑通再固化」+「载体=全局 skill」。
+
+## 目标
+
+建工作流：自动拉 Notion 策划案 → 生成任务清单 → 对照本地进度分析。本任务只做首跑验证 + 固化 skill。
+
+## 产出
+
+| 产物 | 说明 |
+|---|---|
+| `docs/spec/notion-spec-20261013.md` | Notion Feature_Spec 全量快照（13 组 55 行 + 抓取细节备忘） |
+| `.claude/tasks/spec-board.md` | 需求池 × 本地进度对照板（就绪池/超前风险/缺口/待修） |
+
+## 本轮证据链
+
+- 2026-10-13｜Notion 页面 HTTP 直抓/WebFetch=空壳（SPA）；Playwright MCP 浏览器可读，client 集成浏览器 readPage 两次超时中断（弃用）｜已核验（实测）
+- 2026-10-13｜Feature_Spec=需求数据库：13 组（需求页格式参考/玩家/方块分类/方块属性/颜色系统/魔力种子/魔法反应/hud/编辑器/关卡/菜单/视觉效果/当前版本验收标准），列=名称/类型/ID/状态/优先级/阶段/DDL/备注；状态词汇=需求已完成/进行中/待修/未开始｜已核验（DOM 行抽取）
+- 2026-10-13｜55 行全量收割。首滚漏抓底部 4 组（触底 break 时行未渲染完 + 组标题被虚拟化移出 DOM 导致错归组），改小步长 350px + 触底后等 700ms 补收修复｜已核验（前后两次收割行数对比 44→55，组分布 9→13）
+- 2026-10-13｜状态语义歧义：「需求已完成」读作需求定稿（读法 A，推荐）vs 开发完成（读法 B），证据挂 spec-board §二，待用户/策划拍板｜inference（语义判断，非实测）
+- 2026-10-13｜本地对照：TASK-001~013 状态读自 active_task.md（2 DONE/11 CODING/1 DESIGN 挂起）；血量 grep 无命中；Assets/Editor 有 TilemapLevelWindow 等｜已核验（grep/文件清单）
+
+- 2026-10-14｜**P0 复核修正（用户纠错）**：颜色方块**已实现**——颜色 = CellMagicAttr 体系（TASK-002 拍板），CellActor 三色贴图（CellActor.cs:35-41）+ 模拟器/编辑器（CellTile.magic）全链在用。初判"未做"系预设了"独立 CellType.Colored + CellColor 字段"形态、漏查 MagicAttr 既有拍板。「独立 CellColor 字段」建议作废。修正后 P0 真缺口：结晶方块本体（grep 结晶/Crystal 零命中）+ 背景方块（语义待对照，可能=现有 Rock+None+Locked）+ 5 项等需求｜已核验（读码 + grep）
+
+## Open Questions
+
+- 状态列语义读法 A/B 拍板（spec-board §二）——影响整个看板用法。
+- 名称「1」前缀含义（版本 1 需求？）待与策划确认。
+- 4 行未命名占位行是否为策划预留。
+- 背景方块 vs 现有 Rock+None+Locked 格：同一物还是需独立类型/装饰层（Design 对需求判定）。
+
+## Next Steps
+
+1. 用户 review spec-board 与状态语义拍板。
+2. 拍板后固化全局 skill：`~/.claude/skills/notion-spec-sync/SKILL.md`（流程=拉取/清单/分析三段，含抓取细节备忘 6 条）。
+3. （可选）skill 加「与上次快照 diff」段，增量看需求变化。
+4. P0 可开工项收缩为：结晶方块本体（真代码）+ 背景方块（语义对照后可能零代码）；TASK-015 是否按此收缩范围开工，待用户拍板。
+
+---
+
+## Task ID: TASK-015-背景方块（Tile 分层装饰层）
+
+**Status: CODING（代码已落盘，编译/人工配置/验收待用户）**——用户拍板：方案 A（不进 Cell 体系）+ 每关独立加载 + 运行时保持 Tile 形态 + 自定义层级（分类分层）。2026-10-14「开工」授权。
+
+## 目标
+
+背景方块 = 纯视觉装饰层，随 LevelData 走、运行时按数据重建为 Tilemap（Tile 形态原样保留），不进 Cell/魔法反应体系。
+
+## 产出
+
+| 文件 | 改动 |
+|---|---|
+| `Assets/Script/Gameplay/LevelData.cs` | +`BackgroundTileDef`(Pos+TileBase 引用)、`BackgroundLayerDef`(Name/SortingOrder/Tiles)、`LevelData.BackgroundLayers` 字段 |
+| `Assets/Editor/TilemapLevelWindow.cs` | +「①b 加背景层」按钮（LevelGrid 下建 Background_N，sortingOrder 递减）；导出时读全部 Background_* → `ExportBackgroundLayers()` |
+| `Assets/Script/Gameplay/LevelManager.cs` | `LevelLoadedEvent` 扩展携带 `Data`（源 LevelData）；Publish 行加参（唯一构造点 ：96；三订阅方 Binder/CircuitView/PlayerSpawner 只消费，不受影响） |
+| `Assets/Script/Presentation/BackgroundLayerLoader.cs` | 新建：订 LevelLoadedEvent，按 **e.Data**（不拖引用）重建背景 Tilemap（SetTile），Clear 防重载叠层 |
+
+## 本轮证据链
+
+- 2026-10-14｜链路核实：Tile 只活在编辑器（导出→LevelData→运行时隐藏编辑 Tilemap `LevelBootstrap.cs:22`），运行时表现由 CellActor 重建——背景不导出就随场景丢失，故必须进 LevelData 才能随关卡加载｜已核验（读码）
+- 2026-10-14｜`LevelLoadedEvent(worldId, world, spawnPoint)` 不携带 LevelData（`LevelManager.cs:7,:96`）→ Loader 自持 `_levelData` 引用（与 LevelBootstrap 同款）｜已核验（读码）
+- 2026-10-14｜TileBase 引用直存 SO 随资产链打包、不走 Addressables 单独口子；TilemapRenderer vs SpriteRenderer 同排序管线（sortingOrder 负值压后）｜inference（Unity 标准机制，未实测 build/未跑 Play）
+- 2026-10-14｜3 文件未编译：本会话无 Unity 编译环境，编译/运行验证归用户（测试纪律：不创造性绕过）｜inference→待用户升格
+- 2026-10-14｜**用户纠错「tile 是加载的，不是拖 levelData」**：Loader 首版要拖 LevelData 引用，违背"数据随加载链走"。修正：`LevelLoadedEvent` 加 `Data` 字段（grep 确认构造调用点仅 LevelManager.cs:96 一处；订阅方 Binder/CircuitView/PlayerSpawner 均只消费事件，加字段不受影响），Loader 删 `_levelData` 改读 `e.Data`｜已核验（grep + Edit）
+
+## 人工配置步骤（全部 Unity 手动）
+
+1. 关卡编辑器（Tools/魔法回路/关卡编辑器）→「① 场景关卡化」→「①b 加背景层」按需点 N 次（Background_0/1/…，sortingOrder -1/-2/… 自动递减，可 Inspector 改）
+2. Tile Palette 拖**普通 Tile 资产**（Create > 2D > Tiles > Tile，拖贴图即成）当背景笔刷，画到 Background_* 上
+3. 画完「② 导出 LevelData」——日志会报「背景 N 层」
+4. Game 场景：Grid 下人工建空物体 `BackgroundRoot` → 挂 `BackgroundLayerLoader` 组件 → 拖 BackgroundRoot 到 `_backgroundRoot`（**LevelData 不用拖**——随 LevelLoadedEvent.Data 到达）
+5. 注意：BackgroundRoot **别放进** `_editorTilemapRoot`（LevelBootstrap 运行时会隐藏它）；BackgroundRoot 下只放背景层（Clear 清空全牌子）
+
+## 验收清单
+
+1. 导出日志：`exported: ... 背景 N 层`，LevelData Inspector 可见 BackgroundLayers 数据（层名/sortingOrder/Tiles 数）
+2. Play 进 Loading：Console `[BackgroundLayerLoader] 'Level_01' 重建背景 N 层`
+3. 表现：背景贴图显示、压在格子/玩家之下（sortingOrder 生效）；改 Background_N 层的 sortingOrder 再导出重跑，前后关系跟随变化
+4. 分类分层：建 ≥2 层各画不同贴图，两层前后关系正确
+5. 重载不叠层：关卡重载（Loading 再进）背景不重复
+6. 回归：Cell 主链不受影响（投掷/配方/幽灵方块修复行为不变）
+
+## Open Questions
+
+- 多关卡时 LevelData/BackgroundRoot 的组织（TASK-012 关卡生命周期归口）；背景 Tile 资产是否入 Addressables 远端
+- 编辑器「③ 编辑器预览装载」暂不含背景重建（主链已通，需要再加）
+
+## Next Steps
+
+1. 用户聚焦 Unity → 编译 → 按人工配置步骤搭建 → Play 过验收清单 6 项。
