@@ -19,6 +19,10 @@ namespace TapCom.Gameplay
 
         [SerializeField] private Vector2 _groundCheckSize = new(0.9f, 0.08f);
 
+        /// <summary>摔死阈值（TASK-016）：接地瞬间下落速度 ≥ 此值 → Publish FailTriggeredEvent{Fall}。
+        /// 换算关系：1 unit = 32 px，18 u/s = 576 px/s（默认值 18f 为设计拍板数）。</summary>
+        [SerializeField] private float _fallDeathSpeed = 18f;
+
         /// <summary>探针盒顶面与自身 collider 底面的净空：杜绝相切命中自己（空中恒 Grounded=true 的根因）。</summary>
         private const float GroundProbeGap = 0.02f;
 
@@ -27,6 +31,9 @@ namespace TapCom.Gameplay
         private PlayerActor _actor;
         private IZeroFieldQuery _zeroQuery;
         private bool _zeroQueryResolved;
+        private bool _wasAirborne;
+        private float _airborneFallSpeed;
+        private bool _fallDead;
 
         private void Awake()
         {
@@ -38,6 +45,9 @@ namespace TapCom.Gameplay
 
         private void Update()
         {
+            UpdateFallDeath();
+            if (_fallDead) return; // 摔死当帧起禁用输入（结算流程归 A 线面板，状态推进归订阅方）
+
             if (_actor?.InputReader == null) return;
 
             if (!_zeroQueryResolved)
@@ -58,6 +68,30 @@ namespace TapCom.Gameplay
 
             if (_actor.InputReader.JumpPressed && IsGrounded())
                 _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _jumpVelocity);
+        }
+
+        /// <summary>摔死检测（TASK-016）：空中帧记录下落速度（PhysX 落地碰撞会即刻清零 vy，落地帧读不回撞击速度，
+        /// 故用「前帧空中速度 + 本帧落地沿」判定）；接地瞬间速度 ≥ 阈值 → 发 FailTriggeredEvent{Fall}。
+        /// 只发事件不切状态（白名单推进权归订阅方）；失重场内漂移速度被钳在 ZeroDriftSpeed 之下，天然不触发。</summary>
+        private void UpdateFallDeath()
+        {
+            if (_fallDead) return;
+            var grounded = IsGrounded();
+            if (grounded)
+            {
+                if (_wasAirborne && _airborneFallSpeed >= _fallDeathSpeed)
+                {
+                    _fallDead = true;
+                    Debug.Log($"[PlayerMotor] 摔死：落地前下落速度 {_airborneFallSpeed:F1} ≥ 阈值 {_fallDeathSpeed}（TASK-016）", this);
+                    Services.EventBus.Publish(new FailTriggeredEvent { Reason = FailReason.Fall });
+                }
+                _airborneFallSpeed = 0f;
+            }
+            else
+            {
+                _airborneFallSpeed = Mathf.Max(0f, -_rb.linearVelocity.y);
+            }
+            _wasAirborne = !grounded;
         }
 
         /// <summary>失重漂移：W/Space 上、S 下（MoveInput.y 亦生效），松手指数缓停（原型 L1828）。</summary>

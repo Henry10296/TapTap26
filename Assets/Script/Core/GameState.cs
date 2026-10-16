@@ -6,6 +6,8 @@ namespace TapCom.Core
         Initializing,
         TitleScreen,
         Loading,
+        /// <summary>关卡开场演出（TASK-015）：开场 CG 图（可缺）+ 运镜到终点再回玩家；游戏静止，结束进 Playing。</summary>
+        Cg,
         Playing,
         Paused,
         Victory,

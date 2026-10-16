@@ -35,7 +35,8 @@ namespace TapCom.EditorTools
                 "用法：①「场景关卡化」铺 Tilemap → ② Window > 2D > Tile Palette 建 Palette，" +
                 "把 CellTile 资产（Create > 魔法回路 > CellTile）拖进去当笔刷 → ③画关卡 → ④「导出 LevelData」。\n" +
                 "笔刷的格子自带 Cell 定义（在 CellTile 资产 Inspector 里配），导出按数据读，不看名字。\n" +
-                "出生点：用 SpawnTile 笔刷（Create > 魔法回路 > SpawnTile）画一格，导出记入 SpawnPoint。", MessageType.Info);
+                "出生点：用 SpawnTile 笔刷（Create > 魔法回路 > SpawnTile）画一格，导出记入 SpawnPoint。\n" +
+                "终点：用 EndTile 笔刷（Create > 魔法回路 > EndTile）画一格，导出记入 GoalPoint（多格取最后一个）。", MessageType.Info);
 
             if (GUILayout.Button("① 场景关卡化（Grid + Tilemap）")) SceneSetup();
             if (GUILayout.Button("①b 加背景层（Background_N）")) AddBackgroundLayer();
@@ -96,6 +97,19 @@ namespace TapCom.EditorTools
             _foreignCount = 0;
             Vector3Int? spawnPos = null;
             var spawnCount = 0;
+            Vector3Int? goalPos = null;
+            var goalCount = 0;
+            var hasUsed = false; // TASK-016：GridBounds = 已用格（cells+spawn+goal）并集
+            var bmin = Vector3Int.zero;
+            var bmax = Vector3Int.zero;
+
+            void Enclose(Vector3Int p)
+            {
+                if (!hasUsed) { bmin = p; bmax = p; hasUsed = true; return; }
+                bmin = Vector3Int.Min(bmin, p);
+                bmax = Vector3Int.Max(bmax, p);
+            }
+
             foreach (var pos in _tilemap.cellBounds.allPositionsWithin)
             {
                 var tile = _tilemap.GetTile(pos);
@@ -104,6 +118,14 @@ namespace TapCom.EditorTools
                 {
                     spawnCount++;
                     spawnPos ??= pos; // 多个时取第一个
+                    Enclose(pos);
+                    continue;
+                }
+                if (tile is EndTile)
+                {
+                    goalCount++;
+                    goalPos = pos; // TASK-016：多格画了取最后一个（警告在导出后）
+                    Enclose(pos);
                     continue;
                 }
                 if (tile is CellTile cellTile)
@@ -116,6 +138,7 @@ namespace TapCom.EditorTools
                         Magic = cellTile.magic,
                         Locked = true, // 世界默认冻结（铁律 #9）
                     });
+                    Enclose(pos);
                 }
                 else
                 {
@@ -140,6 +163,8 @@ namespace TapCom.EditorTools
             }
             data.Cells = defs;
             data.SpawnPoint = spawnPos ?? Vector3Int.zero;
+            data.GoalPoint = goalPos ?? Vector3Int.zero; // TASK-016：(0,0,0) = 本关无终点
+            data.GridBounds = hasUsed ? new BoundsInt(bmin, bmax - bmin + Vector3Int.one) : new BoundsInt(); // TASK-016：已用格并集
             data.BackgroundLayers = ExportBackgroundLayers(_tilemap.transform.parent);
             EditorUtility.SetDirty(data);
             AssetDatabase.SaveAssets();
@@ -149,8 +174,11 @@ namespace TapCom.EditorTools
             else if (spawnCount > 1)
                 Debug.LogWarning($"[TilemapLevel] 出生点画了 {spawnCount} 个，取第一个 {spawnPos.Value}");
 
+            if (goalCount > 1) // TASK-016：多终点取最后一个并警告（0 个合法 = 无终点）
+                Debug.LogWarning($"[TilemapLevel] 终点画了 {goalCount} 个，取最后一个 {goalPos.Value}");
+
             var warn = _foreignCount > 0 ? $"（跳过非 CellTile {_foreignCount} 个）" : "";
-            Debug.Log($"[TilemapLevel] exported: {path}，{defs.Count} defs，spawn={data.SpawnPoint}，背景 {data.BackgroundLayers.Count} 层{warn}", data);
+            Debug.Log($"[TilemapLevel] exported: {path}，{defs.Count} defs，spawn={data.SpawnPoint}，goal={data.GoalPoint}，bounds={data.GridBounds.min}~{data.GridBounds.max}，背景 {data.BackgroundLayers.Count} 层{warn}", data);
         }
 
         /// <summary>导出背景层（TASK-015）：读 LevelGrid 下所有 Background_* Tilemap → BackgroundLayerDef（Tile 引用直存，运行时 SetTile 重建）。</summary>

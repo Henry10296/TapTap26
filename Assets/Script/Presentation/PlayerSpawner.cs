@@ -44,6 +44,12 @@ namespace TapCom.Presentation
             _spawned.Add(player);
 
             if (_cameraRig != null) _cameraRig.SetTarget(player.transform);
+
+            // TASK-019：每关种子数量随关卡走，生成后立刻注入（注入先于 Start 的全量发布，HUD 拿到的即关卡值）
+            var inventory = player.GetComponent<PlayerInventory>();
+            if (inventory != null) inventory.ApplyLevelSeeds(e.Data);
+            else Debug.LogError("[PlayerSpawner] Player.prefab 缺 PlayerInventory，关卡种子配置未生效");
+
             Debug.Log($"[PlayerSpawner] player spawned at {pos} (world '{e.WorldId}')");
         }
 

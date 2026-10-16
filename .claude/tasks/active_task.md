@@ -3,7 +3,7 @@
 > 跨会话状态锚点。换会话第一动作 = 读本文件接管，不靠记忆、不靠前序对话。
 > 有 Edit/Write 的轮次，结束前必须先回写本文件（Stop hook 强制）。
 >
-> **当前任务：TASK-014-投掷体验三改+幽灵方块修复（见文末）**。TASK-001~013 已完结/前序待验收，留作归档记录。
+> **当前任务：TASK-018-种子HUD（见文末，CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
 
 ---
 
@@ -736,3 +736,213 @@ Core 运行框架：GameManager（GameState 状态机 + Service 容器）、Tick
 ## Next Steps
 
 1. 用户聚焦 Unity → 编译 → 按人工配置步骤搭建 → Play 过验收清单 6 项。
+
+---
+
+## Task ID: TASK-016-关卡通关链与体验批量（多 agent 并行）
+
+**Status: CODING（四线全部完成 + 主线缝合收口；代码未编译，Unity 聚焦首编 + 人工配置 + 验收清单待用户）**
+
+## 目标（2026-10-14 用户需求单）
+
+背包 3/3/3 + 切色 1/2/3 滚轮 + CG 状态（一图一点继续、会话内一次）+ 基岩 + 一滴血（摔落/挤压失败）+ 数值全可调 + 手册按钮 + 暂停面板 + 胜利/失败结算 + 重置按钮 + 关卡序列配置 + 终点胜利判定 + 开局运镜（Cinemachine）。
+
+## 用户拍板（AskUser 四问）
+
+- 相机四件（偏移/钳制/震动）与切色 = **都是待做**（本轮实读代码确认均无）
+- 种子耗尽 = **暂不判失败**（重置按钮成唯一兜底）
+- 运镜 = **引入 Cinemachine**（CM3.x）
+- CG 只播一次 = **本次游玩会话内一次**（重启恢复）
+
+## 默认项（用户未反对即生效）
+
+开局顺序 CG图→点击→运镜→Playing；游玩指针常显；震动触发=失败大震/爆裂小震；随机定色留调试开关默认关；GridBounds 导出按 Tilemap 并集算。
+
+## C0 契约落盘（2026-10-14，本轮实写）
+
+- GameState.cs +Cg 态｜GameManager.cs:44-51 白名单 +Loading→Cg/Cg→Playing/Paused→TitleScreen/Defeat→TitleScreen｜已核验（Edit 成功）
+- GameEvents.cs 尾部 +FailReason{Fall,Crush}/VictoryTriggeredEvent{GoalPos}/FailTriggeredEvent{Reason}/IntroStartedEvent/IntroFinishedEvent｜已核验（Edit 成功）
+- LevelData.cs +GoalPoint/+CgImage/+GridBounds（注意：该文件被并行 TASK-015 背景层会话同日修改，BackgroundLayers 字段系对方所加，非本线）｜已核验（重读全文）
+- 新 Script/Gameplay/LevelSequence.cs（Entry{LevelId,Level}/ToArray）｜已核验（Write 成功；未编译）
+- InputSystem_Actions Player map +SelectSeed1/2/3(<Keyboard>/1/2/3)+SeedScroll(<Mouse>/scroll)｜已核验（python 写入+回读自证）
+- **开局流程契约**：Loading→Cg（LevelManager.Load 推进，B 线改）→ UI 显示 CG（会话内一次标记）→ 点击/空格发 IntroStartedEvent → 相机运镜终点→回玩家 → 相机发 IntroFinishedEvent → UI TrySetState(Playing)
+
+## 写权表（互斥，越界=上报不改）
+
+A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player/** + Ballistics.cs(仅加重载) + LevelManager.cs(仅 Load 推进态) + 新 GoalSpot + Editor/EndTile.cs + TilemapLevelWindow.cs(热文件最小增量) + TrajectoryPreview.cs(仅速度接线)；C=Packages/manifest.json + Script/Presentation/Camera/** + PlayerSpawner.cs(仅目标接线)；D=Cell.cs + MagicCircuitSimulator.cs + Editor/CellTile.cs + CellActor.cs。C0 文件全线只读。
+
+## 并行会话警示
+
+2026-10-14 另一会话在做 TASK-015 背景装饰层（BackgroundLayerDef/BackgroundLayerLoader，已写 active_task），TilemapLevelWindow 导出链刚被其改过——B/D 动该链前必须先 Read 最新版。
+
+## Open Questions
+
+- 全部线：未编译（用户聚焦 Unity 统一首验）；各线人工配置步骤与验收清单随线报告回填本文件。
+
+### TASK-016 进度（2026-10-14，主编排增量回写）
+
+- **C0 补丁（主线落）**：GameManager.TrySetState 迁移成功后按 IsFrozenState(Cg/Paused/Victory/Defeat) 置 Time.timeScale 0/1（暂停/CG 世界静止；TickManager 经 CoreBootstrap.cs:82 Time.deltaTime 驱动已核实连锁冻结；相机/UI 用 unscaled 时间已通知 C 线）｜已核验（Edit 成功，未编译）
+- **A 线完成**（GameBootstrap.cs 重写 + Presentation/UI/ 新 6 文件：CgController/PausePanel/VictoryPanel/DefeatPanel/ResetButton/HandbookPanel）：Esc=暂停切换、CG 会话内一次（static HashSet 按 worldId）、结算面板事件驱动、指针常显（grep Cursor 0 命中确认无藏针逻辑）｜已核验（agent 报告全文对读；未编译）。偏差备案：①按项目既有模式 OnDisable 退订（防跨场景死 handler，合理采纳）②失败原因文案用 legacy Text ③Paused 冻结本依赖主线 timeScale 补丁（已落）④建议 LoadCurrent 加 null 守卫（LevelManager 归 B 线，B 完工后主线补）
+- **D 线完成**（Cell.cs +Bedrock+构造置 Frozen；MagicCircuitSimulator +IsImmovable 四闸兜底+Static 免疫修 Changed 换皮副作用；CellTile +CustomEditor 强制 Bedrock→Magic=None；CellActor +_bedrockSprite 槽+三参 Bind 缺省向后兼容）：全库唯一 new Cell 入口=WorldGrid.AddCell（WorldGrid.cs:33），构造收口即全链免疫，零 schema 改动｜已核验（agent 报告全文对读；未编译）。TilemapLevelWindow 结论=零改动（导出链直读序列化字段无特判）
+- B 线（玩法判定）/ C 线（相机 Cinemachine）：进行中，完成后补记
+- A 线补充核查（timeScale 契约）：A 全部文件 0 缩放时间依赖无需改动（grep 验证）；确认旧 PlayerCameraRig.cs:65-68/:74-77 两处 Time.deltaTime 平滑在 timeScale=0 会冻死运镜 → Cg 软锁风险，修复责任在 C 线（unscaledDeltaTime），已在其契约内；新增验收项=Cg 期间确认 timeScale=0 日志同时相机仍在动并最终发 IntroFinished
+- **C 线完成**（Packages/manifest.json +com.unity.cinemachine 3.1.2；PlayerCameraRig.cs 整体重写为 CM3 桥 307 行，保留类名与 SetTarget 签名→PlayerSpawner 零改动）：鼠标偏移(系数0.35/钳2.5格)+代码钳制 GridBounds(弃 Confiner2D，纯数学零物理对象)+双 ImpulseSource(失败大震/爆裂小震)+运镜(终点格心停1s回玩家)+动态缩放保留；CM3 命名空间实为 **Unity.Cinemachine**（契约笔误 UnityEngine.Cinemachine，已纠）｜已核验（agent 报告对读；未编译）。**遗留雷已发回 C 修**：grep 实锤 ：139/:223 仍 Time.deltaTime，timeScale=0 冻死运镜→Cg 软锁，待 C 回修复清单（unscaledDeltaTime + WaitForSeconds→Realtime 全查）
+- C 线配置要点（验收时对照）：Main Camera z=-10/Orthographic/CinemachineBrain(Default Blend EaseInOut 2s)；CM_FollowCamera Priority=10(Follow Damping(1,1,0)+ImpulseListener)、CM_GoalCamera Priority=0；ShakeSmall/ShakeLarge 两个 ImpulseSource；四引用拖 rig。_introBlendWait≥Brain Blend 时长联动
+- C 线软锁修复闭环（回炉后主线独立复核）：PlayerCameraRig.cs :140/:225 → unscaledDeltaTime、:280/:282/:285 → WaitForSecondsRealtime（blend 等待×2 + 终点停留），grep 全文件 scaled 时间 0 残留，现存 5 处时间引用全 unscaled｜已核验（本轮 grep 实读）。C 线状态=完成
+- **B 线完成**（改 8：Inventory 3/3/3+无限默认关、InputReader +4 action、Thrower 手动切色+空色拒投+_throwSpeed 序列化、Motor 摔死判定[前帧空中速度+落地沿，_fallDeathSpeed=18 默认]、LevelManager Load→Cg、Ballistics 4 参重载、TrajectoryPreview 读 Thrower 速度、TilemapLevelWindow 热文件最小增量[EndTile 拦截+GoalPoint+GridBounds 并集，背景层改动零冲突]；新 3：PlayerCrushDetector[AABB 数学重叠>0.1f，格无 collider 故不用 OverlapBox]、GoalSpot+GoalSpotLoader 两类同文件[防重载双生成]、EndTile 笔刷）｜已核验（agent 报告对读；未编译）。库存每关重置机制=PlayerSpawner 先 Clear 再 Instantiate（prefab 序列化值重建），非 Start 初始化
+- **主线缝合收口（B 报缺口，四线完工后主线落针）**：①SeedThrownEvent +Speed 字段（GameEvents.cs）②PlayerThrower 发布填 Speed=_throwSpeed ③sim OnSeedThrown:316 改用 e.Speed（<=0 回退常量）——「数值可调」闭环：预览/真实/模拟器三方同源 ④LevelManager.LoadCurrent +null 守卫（A 线上报 LevelSequence null 项防 NRE）｜已核验（Edit ×4 成功；未编译）
+- **验收前置警示**：①Player.prefab 旧序列化值盖新代码默认（RandomSeedType 勾掉/InfiniteSeeds 关/种子 3,3,3/挂 PlayerCrushDetector）②GameBootstrap 旧 _levels 引用已失效，须建 LevelSequence 资产重拖 ③首次聚焦 Unity 需联网解析 Cinemachine 3.1.2 ④关卡须用编辑器重新导出（新字段 GoalPoint/GridBounds）⑤多线共享首编：红字按文件归属线排查
+
+### TASK-016 首编结果与修复（2026-10-14，用户聚焦 Unity 后主线自查 Editor.log）
+
+- Unity 已解析 Cinemachine 3.1.2（packages-lock.json 变更实证）+ 新文件 .meta 已生成｜已核验（git status）
+- 首编唯一活红字：CgController.cs:34/:41 CS1503——OnIntroFinished 无参方法订阅/退订 Action<IntroFinishedEvent> 不兼容｜已核验（Editor.log grep error CS 唯一化）
+- **修复**：OnIntroFinished 签名加 IntroFinishedEvent 参数（CgController.cs:84）｜已核验（Edit 成功，待用户复编译）
+- 日志其余红字归档：CS0103 Ballistics/CS0177 = TASK-014 历史（active_task 已记录修复）；CS0103 SetSeedType/CycleSeedType = B 线中途保存中间态，现码定义+调用齐全（grep 实证自洽）
+- Wwise CS0618 旧警告无害（TASK-013 面，AkSoundEngine 改名提示）
+- 下一步：用户复编译 → 零红字后按人工配置 5 步走（三资产 → Player.prefab 五处 → Game.unity UI/相机/Loader → 重导关卡 → Play 验收）
+- 2026-10-15｜用户指令「你还是分文件」→ GoalSpot.cs/GoalSpotLoader.cs 拆两文件（一文件多类致 Add Component 查找困扰）；GoalSpot.cs 保留原 .meta GUID（预制体已挂引用不断），Loader 新文件待 Unity 刷新生成 .meta｜已核验（Write ×2；未编译）
+- 2026-10-15｜**首跑红字「未找到 InputActionAsset 或 Player action map」根因锤死+修复**：昨日本线 python 改 InputSystem_Actions 时 4 action+4 binding 用了非 GUID id（selectseed1-t15 等），Unity 解析器按 GUID 解 id → Player map 加载失败 → 输入全线瘫。修复=8 id 全换 uuid4，回读自证 Player map 零非 GUID｜已核验（python 回读）。**教训：改 .inputactions 的 id 字段必须 GUID 格式，自定义字符串会静默炸整个 map**（Editor.log 无该资产名报错，靠格式对照定位）。用户日志其余链路全通（装关/背景层/出生点/Loading→Cg/相机等待模式）
+- 2026-10-15｜**「不落地/扔不出」诊断闭环 = 场景配置缺口非代码 bug**：①实查 Game.unity TASK-016 七组件全 0 挂载（CgController 等）→ 无人发 IntroStarted → 卡死 Cg 态 timeScale=0 全冻结（浮空+模拟冻死，日志止于 Loading->Cg 铁证）②相机不跟随 = CM_GoalCamera Priority=10 与 FollowCamera 平级（应 0），Brain 钉死终点机位 ③ShakeSmall×2 挂错组件（是 CinemachineCamera 非 ImpulseSource）、ShakeLarge 缺、rig 震动引用空 ④预制件全读无问题（Player 动态刚体重力✓/Square Static+Ground 层✓/碰撞矩阵全开✓）⑤用户 prefab 种子仍 2/2/4 未改 3/3/3｜全部已核验（场景 YAML/预制件 YAML/TagManager/DynamicsManager 实读）。**防软锁 watchdog（Cg 超时强制 Playing）已提议待用户拍板**
+- 2026-10-15｜**「CGPanel 没出来」定案 = CgImage 未配置非 bug**：全 LevelData 资产 CgImage EMPTY（python 实查）→ CgController 按设计走「无图直运镜」分支。上轮日志已证全链通（Cg→Playing 走 IntroSequence:287 完整回执点=运镜真跑了；PlayerInputReader 红字消失=GUID 修复生效）。**隐患登记**：_cgPanel/_cgImage 引用拖的是 UI prefab（guid 91017fb3）实例内部件（YAML stripped 块）——能解析但脆，若面板显示异常需拆出场景重拖。前一轮「UIRoot/Canvas/EventSystem 关闭」系本人 YAML 解析误差，实查 UIRoot active=1，已纠正
+
+---
+
+## Task ID: TASK-017-关卡限时与计时器
+
+**Status: CODING（代码已落盘，编译/场景搭建/验收待用户）**——用户 2026-10-15 需求：①每关一个时间限制，计时器=指针+背景，指针转动 ②失败或时间到都算失败，直接切失败面板。3 默认项按推荐执行（0=不限时隐藏 / 指针一圈=整关限时顺时针 / 暂停停摆），用户「开始」授权落码。
+
+## 方案（已提用户，未授权不动码）
+
+| 文件 | 改动 |
+|---|---|
+| `LevelData.cs` | +`TimeLimit`（float 秒，0=不限时+隐藏计时器） |
+| `GameEvents.cs` | `FailReason` +`TimeUp` |
+| 新 `Presentation/UI/LevelTimer.cs` | 订 LevelLoadedEvent（读 TimeLimit）+ GameStateChangedEvent；仅 Playing 态递减 Time.deltaTime（暂停停摆）；剩余比例→clockHand 匀速转一圈（顺时针）；归零 Publish FailTriggeredEvent{TimeUp} 只发一次 |
+| `DefeatPanel.cs` | UpdateReason 三元是 Fall/Crush 二元，TimeUp 会错显示「被挤压」→ +「失败原因：时间到」分支 |
+
+## 本轮证据链（2026-10-15）
+
+- 2026-10-15｜失败链已存在：`FailTriggeredEvent`→`DefeatPanel.cs:46-52` 订阅→TrySetState(Defeat)→弹面板→「重试=Reload/回标题=ExitToTitle」；`GameManager.cs:48` Playing→Defeat 边已有——「时间到=失败切面板」零状态机改动，只需发事件｜已核验（源码实读）
+- 2026-10-15｜`FailReason` 现仅 Fall/Crush（GameEvents.cs:88-95），无 TimeUp；`DefeatPanel.cs:62` UpdateReason 为二元三元表达式｜已核验（源码实读）
+- 2026-10-15｜`LevelData.cs` 全文无 TimeLimit 字段；`Timer.prefab` 已人工搭好（Timer 根 100×100 + bg 442×442 + clockHand 31×170 两 Image，**pivot 均在中心**，无任何脚本）——clockHand pivot 不改到一端会绕指针中点打转（人工步骤已列）｜已核验（prefab YAML 全读）
+- 2026-10-15｜**Game.unity UI 配置不满足新需求**：UI 线仅 UIRoot(挂 CgController)+Canvas(唯一子=CGPanel prefab 实例)；跨场景 GUID 对账——GameState.prefab(挂 VictoryPanel，_panel/_nextLevelButton 已拖好 :683-684) 只被 SampleScene.unity 引用；Timer.prefab 只在 SampleScene；Pasue.prefab(挂 PausePanel) 只在 SampleScene；**DefeatPanel 组件全项目零挂载**（失败面板 UI 不存在）；HandbookPanel/ResetButton 组件亦零挂载（open-question 不阻塞）｜已核验（Game.unity 全部 transform 树解析 + 全 Assets GUID 反查脚本）
+- 2026-10-15｜场景入口实证：Build Settings = Start.unity + Game.unity（SceneFlow 常量 Start/Game 对齐）；**SampleScene.unity 不在 Build 且有未解决合并冲突（UU，多处 <<<<<<< Updated upstream/Stashed changes）**——其内的 Timer/GameState/Pasue 配置均不在实际游戏链路上｜已核验（EditorBuildSettings.asset + git status + 冲突标记 grep）
+- 本轮工具产物：`Temp/scene_tree.py`（场景层级解析临时脚本，Temp/ 为 Unity 忽略目录不进库）｜已核验（Write 成功）
+
+## 人工配置步骤（用户，全部 Unity 手动）
+
+1. Game.unity 的 Canvas 下拖入 `GameState.prefab`（胜利面板即通，引用已配好）
+2. GameState.prefab 根上补挂 `DefeatPanel` 组件，拖 `_panel`=gameover 图子面板 / `_retryButton`=ReSetButton / `_backToTitleButton`=**需新增回标题按钮** / `_reasonText`=TMP 或加 Text（可空）
+3. Canvas 下拖入 `Timer.prefab` 摆位；`clockHand` pivot 改一端（如 0.5,0）
+4. （建议）拖入 `Pasue.prefab`——Esc 暂停逻辑在、面板不在
+
+## Open Questions（待拍板 3 默认项）
+
+~~1. TimeLimit=0 = 不限时 + 隐藏计时器~~ / ~~2. 指针一圈 = 整关限时、顺时针~~ / ~~3. 暂停时计时器停摆~~——三项推荐均被采纳（2026-10-15 用户「开始」未提异议，按推荐落码）。
+
+### CODING 落盘（2026-10-15，用户「开始」授权，全部 Write/Edit 成功，**未编译**）
+
+- `LevelData.cs` +`TimeLimit`（float 秒；0=不限时）字段（CgImage 之后）｜已核验（Edit 成功）
+- `GameEvents.cs` `FailReason` +`TimeUp` 枚举项（Crush 之后）；全库 FailReason 消费点仅 DefeatPanel.UpdateReason（文案）与 PlayerCameraRig（忽略 payload，`:295`），加枚举项无破坏面｜已核验（Edit 成功 + grep 消费点）
+- 新 `Script/Presentation/UI/LevelTimer.cs`（TapCom.Presentation，同 DefeatPanel 模式）：订 LevelLoadedEvent 读 e.Data.TimeLimit（事件带 Data 系 TASK-015 改造，LevelManager.cs:7-21 实读确认）→ 装表/重置/显隐；**Update 仅 Playing 递减 Time.deltaTime**（暂停/CG/结算天然停摆 + Frozen timeScale=0 双保险）；归零 Publish FailTriggeredEvent{TimeUp} 一次（_fired 防重）；指针角度=360°×剩余比例（满时限 12 点起顺时针扫一圈回 12 点，每帧写 localRotation）｜已核验（Write 成功；未编译）
+- `DefeatPanel.cs` UpdateReason 三元改 switch 表达式 + TimeUp→「失败原因：时间到」（修「TimeUp 错显示被挤压」隐患）｜已核验（Edit 成功）
+- 设计精简备案：LevelTimer **不订** GameStateChangedEvent（曾拟「进 Playing 重置剩余时间」——被自查否决：暂停→恢复会把已跑时间清零，属 bug；重置唯一入口=LevelLoadedEvent，重载/换关/重试全覆盖）｜已核验（逻辑推演）
+
+## Next Steps
+
+1. 用户聚焦 Unity → 编译（LevelTimer.cs 新 .meta 由 Unity 自动生成）。
+2. 用户场景搭建（前述人工 4 步：GameState.prefab 进 Canvas / 补挂 DefeatPanel 拖 4 引用 / Timer.prefab 进 Canvas+clockHand pivot 改一端 / 建议 Pasue.prefab）+ **Game.unity 挂 LevelTimer 组件**（拖 Timer 根 + clockHand）+ Level_01/Level_02 Inspector 填 TimeLimit 秒数。
+3. Play 验收（见验收清单）。
+
+---
+
+## Task ID: TASK-018-种子HUD（数量绑定 + 选种指针）
+
+**Status: CODING（代码已落盘，编译/挂组件拖引用/验收待用户）**——用户 2026-10-16 需求：HUD 绑定魔法种子数量 + 指针指向当前选中的魔法，「指针和鼠标的滚轮一致」（滚轮切色时指针跟随）。
+
+## 本轮证据链（2026-10-16）
+
+- 2026-10-16｜**Hud.prefab 实读（用户已搭好且已拖进 Game.unity Canvas 下，m_TransformParent=1711254178 实证）**：Seeds 容器（锚点 (-766,243) 左上区）下三图标**竖排一列**（同 x=-61.73）：Red y=-159 / Blue y=-329 / Yellow y=-494（125×125，贴图 Hud_Seed_Blue/Red/Yellow_V0）；各带一个 TMP「00」占位（Red→Text (TMP)、Blue→Text (TMP) (1)、Yellow→Text (TMP) (2)）；ChoiceMark 51×51 箭头图（Hud_Seed_ChoiceMark_V0，Image）现悬 y=-228（Red/Blue 之间，判临时摆位）；另有 Reset（仅 Image 无 Button 组件）/HandBook/HandBookPanel/Size 节点本需求不碰｜已核验（prefab YAML 解析 + 贴图 guid 反查 Arts/Level/Hud/）
+- 2026-10-16｜**数据源缺口实证（加事件的依据）**：PlayerInventory 扣种子走私有 SetCount（:50-58）零事件；PlayerThrower.SetSeedType（1/2/3 键与滚轮同路）零事件——HUD 无从得知；滚轮链路已通（PlayerThrower.cs:75-76 SeedScrollDelta→CycleSeedType，TASK-016）｜已核验（源码实读）
+- 2026-10-16｜**指针形态判定 = 竖直滑动非旋转**：三图标同 x 竖排一列，几何上只有滑动跟随自然；ChoiceMark 与图标同父（Seeds），anchoredPosition 直接可比｜已核验（prefab 布局）
+- **事件时序推演**：HUD 场景常驻（OnEnable 订阅于场景加载）＞玩家实例化（PlayerSpawner 在 LevelLoadedEvent 时 Instantiate）→ 玩家侧 Awake/Start 发布初始值必达 HUD，HUD 零拉取逻辑｜已核验（生命周期推演）
+- **流程教训登记**：上轮方案提完停在「等拍板」，用户直接要代码——本项目当前节奏 = 方案给出后默认落码，不重复确认（用户反馈「你根本就没写 SeedHud」）｜已核验（用户原话）
+
+## CODING 落盘（2026-10-16，用户催办授权，全部 Write/Edit 成功，**未编译**）
+
+- `GameEvents.cs`：+`SeedCountChangedEvent{Type,Count}`、+`SeedTypeChangedEvent{Type}`（SeedThrownEvent 之后）｜已核验（Edit 成功）
+- `PlayerInventory.cs`：+Start 全量三发（Blue/Red/Yellow 初始绑定，随玩家每关重建自动刷新 HUD）；SetCount 尾部 PublishCount（唯一发布口，TryConsume 经它到达）｜已核验（Edit 成功）
+- `PlayerThrower.cs`：RollSeedType 尾部发 SeedTypeChangedEvent（覆盖 Awake 初始/随机瞄准重掷/投出后）；SetSeedType 尾部发（覆盖 1/2/3 键与滚轮）——两处为仅有的两个 CurrentSeedType 写口，全覆盖｜已核验（Edit 成功 + 写口 grep）
+- 新 `Script/Presentation/UI/SeedHud.cs`（TMPro）：订两事件；数量→`_blueCount/_redCount/_yellowCount` 文本；切色→`_choiceMark.anchoredPosition = 所选图标 anchoredPosition + _offset`（默认 (0,-95) 图标正下方，Inspector 可调）；Start 引用齐整性告警（同 DefeatPanel 风格）｜已核验（Write 成功；未编译）
+
+## 人工配置步骤（Unity 手动）
+
+1. Hud.prefab 根挂 `SeedHud` 组件，拖 7 引用：`_blueCount`=Blue 下 Text (TMP) (1)、`_redCount`=Red 下 Text (TMP)、`_yellowCount`=Yellow 下 Text (TMP) (2)、`_blueIcon/_redIcon/_yellowIcon`=三个图标 RectTransform、`_choiceMark`=ChoiceMark
+2. Play 看指针落点 → 微调 `_offset`（默认 (0,-95)）
+
+## 验收清单
+
+1. 进关：三个数量文本显示 3/3/3（非"00"），指针停在默认蓝（Blue）图标旁
+2. 滚轮/1-2-3 切色：指针立即滑到对应图标旁；数量文本实时随投掷递减
+3. 摔死重试/下一关：库存重置 3/3/3 文本自动刷新，指针回当前默认色
+4. 无限种子调试开：数量恒 3 不动
+5. 回归：投掷/拒投（余 0 拒投日志）行为不变
+
+## Open Questions
+
+- 数量 0 置灰/隐藏图标：用户未提，未做（上轮已声明）——需要再发话
+- Reset/HandBook 按钮无 Button 组件（仅贴图）：本需求外，挂账不碰
+- 2026-10-15｜**运行时全链验收通过（用户日志逐条对读）**：CG→点击→运镜（IntroSequence:287 完整回执）→Cg→Playing✓、投掷扣量✓、空色拒投✓（Blue 0 拒投不消耗）、种子落格✓、tick 持续运转✓、BGM✓、PlayerInputReader 红字绝迹（GUID 修复生效）✓。前次「卡 Cg」定性=编辑器失焦暂停（Audio suspended 实证），非 bug。**遗留配置**：库存仍 2/2/4（待改 3/3/3）、rig 震动引用空（ShakeSmall/Large 待重建为 Impulse Source 后拖入）——用户侧清单第 2/3 步收尾
+- 2026-10-15｜**用户拍板「点完 CG 立刻开始玩」→ 流程改版**：StartCameraIntro 发布 IntroStartedEvent 后立即 TrySetState(Playing)（运镜降级纯镜头表现，不再冻结等待）；OnIntroFinished 因已非 Cg 态自动空转、契约不变｜已核验（Edit 成功，未编译）。**相机不回来根因**：场景实查两机位 Priority 均 10（用户未改），运镜降回 10 后平级、Brain 不切回 → 钉死终点；修法=GoalCamera 改 0（用户手动）。运镜时长缩水指引：Inspector _introBlendWait 0.6/_goalDwellTime 0.6（场景序列化值，代码默认不生效）
+- 2026-10-15｜**「相机不回玩家」真根因=C 线代码 bug 非配置**：IntroSequence 回程写 `_goalCamera.Priority = followPriority`（抄跟随机位值）→ 无论场景怎么配，首遍运镜后 Goal 必与 Follow 平级 → Brain 平级不切回。修复=进场存 `goalRestPriority`（终点机位自身值）回程还原｜已核验（Edit 成功，未编译）。场景配置要求：Goal(0) < Follow(10)
+- 2026-10-15｜**「没进下一关」定案 = VictoryPanel 等五组件未挂场景**：日志铁证链 GoalSpotLoader 生成终点✓→GoalSpot 玩家抵达发布 VictoryTriggeredEvent✓→之后无 Playing→Victory（无人订阅）；实查 VictoryPanel/DefeatPanel/ResetButton/HandbookPanel/PausePanel 场景 0 挂载。即时解锁改版运行时自证✓（Cg→Playing 调用栈来自 StartCameraIntro:120 新路径）。已给用户五面板补搭步骤
+
+- 2026-10-16｜**「UI 挂载疑云」定案 = 用户挂的是 prefab 源文件，检查盲区非未保存**：5 个 UI prefab 在 Game.unity 各有 1 个 PrefabInstance（m_SourcePrefab 逐 guid 对账✓）。CGPanel.prefab 挂 CgController（_cgPanel/_cgImage 已拖非零且 fileID 全可解析；prefab 保存 23:04 晚于场景 22:40——改 prefab 不动场景文件，故场景 mtime 不变，「未保存」判断系盲区误报已修正）；GameState.prefab 挂 VictoryPanel（_panel/_nextLevelButton 接线✓）；Pasue.prefab 挂 PausePanel（3 引用接线✓）。DefeatPanel/ResetButton/HandbookPanel 全项目仍 0 挂载；Hud.prefab 已有现成物体可挂：Reset(按钮)/HandBook(按钮)×2/HandBookPanel(面板)｜已核验（prefab+场景 YAML 全读）
+- 2026-10-16｜**新发现结构性风险「面板自杀」待拍板**：三控制脚本设计为挂常驻物体+SetActive 子面板，但 Start 兜底 HideImage/Show(false) 的 _panel 现与宿主同物体 → Start 自禁用 → OnDisable 取消全部事件订阅 → CG 软锁/胜利面板不弹/暂停面板不弹（CgController.cs:136-139、VictoryPanel.cs:55-58、PausePanel.cs:47-50 实读；HandbookPanel/ResetButton 无此问题）。场景 UIRoot 仍残留旧 CgController（scene object 66347178，上次绿跑生效的那份）与新 prefab 份构成双订阅，须删一份。方案已提用户：①改码 订阅挪 Awake/OnDestroy（推荐，用户零操作，prefab 自包含挂法合法化）②用户给每个面板 prefab 加常驻父层挪脚本 ③回挂场景 UIRoot
+- 2026-10-16｜**「面板自杀」修复落码（用户拍板「改代码」）**：CgController/PausePanel/VictoryPanel/DefeatPanel 四脚本订阅+按钮接线从 OnEnable/OnDisable 整体挪到 Awake/OnDestroy（脚本挂面板本体=合法自包含挂法，SetActive 宿主不再掉订阅）；4 处类头注释同步。全部 Edit 成功，**未编译**。用户侧待办：①删 Game.unity 场景 UIRoot 上的旧 CgController 组件（scene object 66347178，与 prefab 份双订阅）②补挂三组件：DefeatPanel→GameState.prefab 根（建失败子面板+重试/回标题按钮拖 4 引用）、ResetButton→Hud.prefab 的 Reset 物体（Button.onClick→ResetButton.ResetLevel）、HandbookPanel→Hud.prefab（挂 HandBook 按钮或常驻物，_panel→HandBookPanel，onClick→HandbookPanel.Toggle）③编译过→回归验收：CG 点击开玩/踩终点弹胜利/下一关/Esc 暂停面板/摔落挤压缩失败面板/Reset 重开/手册开关
+- 2026-10-16｜**Reset 按钮死路修复（用户「继续」语境下按合同补边）**：ResetButton.ResetLevel→LevelManager.Reload（LevelManager.cs:74）先 TrySetState(Loading)，但 GameManager.cs:48 Playing 白名单缺 Loading → 游玩中 Reset 必被拒（ResetButton.cs 文档「边已有」系合同意图、实现漏边）。修=Playing 白名单 +GameState.Loading 一行；全库 grep 确认仅 ResetButton 一个调用方需要此边（DefeatPanel.Retry 走 Defeat→Loading 已通），无误触发面。其余 UI 脚本所依赖边逐一核过全通（Cg→Playing/Paused↔Playing/Playing→Victory/Victory→Loading+TitleScreen/Defeat→Loading+TitleScreen/Paused→TitleScreen）。Edit 成功，未编译
+- 2026-10-16｜状态扫描：3 组件（DefeatPanel/ResetButton/HandbookPanel）仍未挂、场景 UIRoot 旧 CgController 仍在（guid 命中 1）、Assembly-CSharp.dll 停在 2026-10-15 22:31（01:47 的 Awake/OnDestroy 改动未编译）——用户三步待办未动
+- 2026-10-16｜**「GameState 按钮点不动」根因锤死 = Hud.prefab 的 Size 物体全屏隐形挡板**：Size=1920×1080 中心 Image、sprite=NONE、raycast=1、active=1，几何实罩 NextButton 矩形 x[-108.5,146.5] y[-399.7,-258.3]；Hud 实例在 Canvas 5 实例中最后（最顶层）→ 吃掉全场 uGUI 点击（NextButton/Pause/Defeat/Reset 全挡）。证据链：Editor.log 最后一次 Playing→Victory（GoalSpot:24→VictoryPanel.OnVictory:46 链路正常）之后再无状态迁移、零 rejected、零点击异常；Awake 期异常=0（订阅+AddListener 已接）；EventSystem+InputSystemUIInputModule（DefaultInputActions ca9f5fa9 包内资产，非项目 inputactions）+GraphicRaycaster 均在；按钮 m_Interactable=1 无 CanvasGroup；Bg/HandBookPanel/Timer.bg/image(LayerClear) 几何均不罩按钮（逐矩形算过）；「点不动」=uGUI raycast 全灭而 CG 点击正常（CgController 走鼠标轮询不走 raycast）的完美分叉。**用户修复（人工，prefab 上）**：Hud.prefab→Size→Image→取消 Raycast Target（或直接删/禁用 Size 物体）。**附带发现**：①Victory 后 PlayerThrower.Update 仍照跑可投掷（Update 不查冻结态，open-question 后议）②拆卸期 92 次「容器未初始化」异常=UI 五脚本+Spawner/Binder/CircuitView/BackgroundLayerLoader/GoalSpotLoader/CrushDetector 的 OnDisable/OnDestroy 在容器置空后调 Services（退出 Play 噪音，修复需拍板）③场景 UIRoot 旧 CgController 仍在（用户尚未删，暂无害——两份指同一面板，但双订阅在）
+
+## TASK-019-每关种子数量自配（2026-10-16，用户需求 + AskUserQuestion 拍板「0=就 0 颗」，已落码未编译）
+
+- 需求：种子初始数量从 Player.prefab 全局固定改为每关 LevelData 自配。形态锁定：LevelData 平铺三个 int（BlueSeeds/RedSeeds/YellowSeeds，与 SpawnPoint/TimeLimit 风格一致）；注入点=PlayerSpawner.OnLevelLoaded 生成玩家后 ApplyLevelSeeds(e.Data)（Instantiate 之后，先于 Inventory.Start 全量发布 → SeedHud 拿到的即关卡值）；0=0 颗无哨兵（拍板：忘配一眼看穿）。重试/换关走同一 LevelLoadedEvent 路径自动全覆盖
+- 落码：LevelData.cs +3 字段；PlayerInventory.cs 类头注释改 TASK-019 + ApplyLevelSeeds(data) 公开方法（null 防护+覆盖三色+全量 Publish+日志自证）；PlayerSpawner.cs 注入三行（组件缺失 logerror 不炸）。全部 Edit 成功，**未编译**
+- 用户侧待办：①编译 ②Level_01/Level_02 Inspector 填三色数量（现值 0=0 颗，忘填则该关投不出任何种子——设计如此）③Play 自证日志：[PlayerInventory] 关卡种子：Blue x / Red y / Yellow z + SeedHud 数字与配置一致
+
+---
+
+## Task ID: TASK-020-三项运行时反馈（基岩规则/时钟/CG）
+
+**Status: DIAGNOSED**（2026-10-16）——诊断完成；#1 基岩规则待拍板，#2/#3 人工清单已交付用户执行。
+
+## 结论（证据链 2026-10-16，全部读码核验，未动代码）
+
+1. **岩石→基岩**：运行时生成岩石 3 处语义不同，待拍板：`MagicCircuitSimulator.cs:217` 种子落格 / `:261` 吸引格落定（均 AddCell(Rock)）/ `~:415-423` 引力配方三块原地消除颜色。基岩语义=Frozen+全免疫+无色不触发配方（`Cell.cs:89`、`Simulator.cs:332/447`）；真切类型需 `CellWorldChangedEvent`（GameEvents.cs:84）加 CellType 字段 + `CircuitView.cs:191` Bind 传 type。另 `CellTile.cs:19` 编辑器笔刷默认 Rock。
+2. **时钟**：① 指针绕自身中腰转——Timer.prefab clockHand Pivot=(0.5,0.5)，修法 pivot→(0.5,0)，零代码；② 背景消失——Timer.prefab 内 LevelTimer._timerRoot 错绑 bg 子节点（fileID 2350575783085446404），Show(false) 只藏表盘；TimeLimit=0 新关（TestWorld 推断 0，未 runtime 实测）触发。正解=组件挪场景 Canvas 常驻节点重绑（Game/SampleScene 均挂 Canvas），不可只改引用（自禁用→OnDisable 退订→失联）。
+3. **CG**：LevelSequence 3 关 = Level_02.asset / "Level_02 1.asset"（重复副本）/ TestWorld.asset；前两者 CgImage 配的是 HUD 占位图（Hud_Seed_Yellow_V0 / Hud_Timer_01_V0），TestWorld 空；真 CG 图 CG_Openning_01_V0 摆在 CGPanel Image 场景 override 上被 ShowImage 运行时覆盖。"同关会话内只播一次"=既有拍板（CgController._shownWorlds）。
+
+## Open Questions
+
+- #1 基岩改哪条规则（217 / 261 / 415 / CellTile 笔刷，可多选）——拍板后走证据三段确认 diff 再编码。
+- "Level_02 1.asset" 副本改名或删——清单给选项，用户定。
+
+## Next Steps
+
+1. 用户答复 #1 → 出精确改动方案 → 确认后编码（2-3 文件，轻量轨）。
+2. 用户执行 #2/#3 人工清单 → Unity 内验收（指针绕表心；TestWorld 关表盘指针整体隐藏；CG 显示配置图）。
+- 2026-10-16｜TASK-020#3 CG 链路全环核验（用户反馈"不对/为什么不播放CG"后补锤）｜已核验（读码+场景YAML）：
+  ① Game.unity:1326 GameBootstrap._sequence → LevelSequence.asset 已接线；② GameManager.cs:46 Loading→Cg 边存在；
+  ③ LevelManager.Load 先 Publish(LevelLoadedEvent) 后 TrySetState(Cg)，CgController OnLevelLoaded 缓存时序正确；
+  ④ CGPanel.prefab 根 active=1、子节点"CG(OpeningCG和EndingCG" active=1，CgController 挂根、_cgImage→子 Image；
+  ⑤ Game/SampleScene 两场景 CGPanel 实例均无 m_IsActive 覆盖；⑥ 四张相关 PNG（Hud_Seed_Yellow/Hud_Timer_01/CG_Openning_01/CG_Ending_01）textureType=8 Sprite、spriteMode=1，运行时引用不会解析为 null。
+  结论：CG 系统按配置正常播放——第1关播黄种子图标、第2关播时钟表盘、第3关(TestWorld CgImage=null)直接运镜。"不播真CG"唯一根因=CgImage 槽内容是 HUD 占位图，修法=拖 CG_Openning_01_V0 进 Level_02.asset 的 CgImage。无其他暗门。
+- 2026-10-16｜TASK-020#3 CG"不播放"日志判定（用户提供 Play 日志）｜已核验：
+  日志 Loading→Cg 后同帧 Cg→Playing，调用栈 CgController.cs:106（!fresh 分支 StartCameraIntro）→:123——证明该次运行 Level_02 运行时对象 CgImage=null（_data 非空：无"[CgController] 进 Cg 但无关卡数据"报错；会话首进：_shownWorlds 空；worldId 非空：'Level_02'）。
+  运行时资产=磁盘 Level_02.asset（64 cells + 种子 2/2/2 与日志吻合）。该次运行时 CgImage 槽为 None，即配置未生效——链路本身无故障。
+  资产今日 17:07:53 已改：Level_02.CgImage=CG_Openning_01（4fbedb6b）、Level_02 1.CgImage=CG_Ending_01（2173a33f），均 Sprite 导入已核；TestWorld 仍空（无 CG 直接运镜，设计如此）。
+  预期：下次 Play 第 1 关即显 CG。若仍不显，查 Inspector CgImage 槽未保存/被还原，再取新日志。
+- 2026-10-16｜TASK-020#3 补充：排除"CG 自动消失/显示时间过短"假说｜已核验（grep 全量）：
+  全库 TrySetState 调用点扫全，能离开 Cg 态的只有 CgController.cs:123（用户点击/空格 → StartCameraIntro）与 :92（OnIntroFinished 回执）。IntroFinishedEvent 发布者仅 PlayerCameraRig.cs:269（引用缺失 fail-open）/ :290（运镜正常完成），二者都在 IntroStartedEvent（仅 CgController.cs:122 点击路径发布）之后；且回执到达时状态已因"点完即开玩"（CgController.cs:123）为 Playing，OnIntroFinished 空转。代码中无 CG 自动关闭计时器，显示后恒停住等点击。
+  结论：此前"没看到 CG"= 配置未生效走了无图跳过分支（图从未显示），非"闪一下"。现配置已对，重进应正常。可选调整（去空格/加提示/最短显示时长）待用户明确要求。

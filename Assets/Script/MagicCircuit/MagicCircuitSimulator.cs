@@ -59,6 +59,7 @@ namespace TapCom.MagicCircuit
     /// 固定步 1/120 内部累加器（TickManager 变步长不进模拟）；效果修改一律经本类落地（铁律 #4）。
     /// 触发模型（2026-10-09 拍板）：新落定块为 source、两步邻域 L 形三连、精确色数查 RecipeTable、
     /// 多组随机选一、每组一次（fired 集）、蓄能 0.5s。
+    /// 基岩免疫（TASK-016）：Bedrock 地形格全路径不可动不可消（IsImmovable 闸），且被配方枚举显式排除（无色兜底）。
     /// </summary>
     public class MagicCircuitSimulator : ITickable, IZeroFieldQuery
     {
@@ -171,7 +172,7 @@ namespace TapCom.MagicCircuit
             foreach (var cell in world.Cells)
             {
                 if (field.Settled.Contains(cell.Position)) continue;
-                if (cell.Frozen) continue; // 始终固定：免疫吸引捕获
+                if (IsImmovable(cell)) continue; // 始终固定/基岩（TASK-016）：免疫吸引捕获
                 if ((CellCenter(cell.Position) - field.Center).sqrMagnitude > field.Radius * field.Radius) continue;
                 _snapshotBuffer.Add(cell);
             }
@@ -312,7 +313,8 @@ namespace TapCom.MagicCircuit
             }
 
             // 弹道解算穿过指针点（2026-10-13「弹道终于指针」：固定速度解低弧角，超射程抬速），预览同源（TrajectoryPreview）
-            var velocity = Ballistics.SolveThrowVelocity(muzzle, e.Target, dir)
+            // TASK-016：速度取事件携带值（PlayerThrower 序列化字段），<=0 回退常量兼容旧发布方
+            var velocity = Ballistics.SolveThrowVelocity(muzzle, e.Target, dir, e.Speed > 0f ? e.Speed : MagicParams.ThrowSpeed)
                 + new Vector2(e.PlayerVelocity.x * MagicParams.PlayerVxInheritRatio, 0f);
             _seeds.Add(new SeedProjectile { Position = muzzle, Velocity = velocity, Type = e.Type });
             Debug.Log($"[MagicCircuit] seed spawned type={e.Type} at {muzzle} vel={velocity}");
@@ -327,6 +329,7 @@ namespace TapCom.MagicCircuit
             foreach (var cell in world.Cells)
             {
                 if (cell.MagicAttr == CellMagicAttr.None) continue;
+                if (cell.Type == CellType.Bedrock) continue; // 基岩无色不触发配方（TASK-016；误配彩色也兜底排除）
                 _snapshotBuffer.Add(cell);
             }
             if (_snapshotBuffer.Count == 0) return;
@@ -420,10 +423,14 @@ namespace TapCom.MagicCircuit
             else if (spell == SpellType.Static)
             {
                 // GDD 静止配方：变化直径内格子「始终固定」（永久免疫解锁），三块不销毁不转色
+                // 已固化/基岩（TASK-016）跳过：固化幂等，不发 Changed——发事件会让表现层按 None 色重绑，基岩被换成岩石贴图（副作用）
                 _snapshotBuffer.Clear();
                 foreach (var cell in world.Cells)
+                {
+                    if (IsImmovable(cell)) continue;
                     if ((CellCenter(cell.Position) - center).sqrMagnitude <= MagicParams.StaticRadius * MagicParams.StaticRadius)
                         _snapshotBuffer.Add(cell);
+                }
                 foreach (var cell in _snapshotBuffer)
                 {
                     cell.Frozen = true;
@@ -435,14 +442,18 @@ namespace TapCom.MagicCircuit
 
         // —— 解锁 / 加固 ——
 
+        /// <summary>不可动判定（TASK-016）：Frozen（静止魔法固化）或 Bedrock（基岩地形，构造即 Frozen——
+        /// 这里按类型再兜一道，防数据被误改后基岩仍保持免疫）。</summary>
+        private static bool IsImmovable(Cell cell) => cell.Frozen || cell.Type == CellType.Bedrock;
+
         /// <summary>解锁 = 出字典进运动列表（tech-spec §4 规则 6；Invariant：字典内格恒 Locked）。
-        /// 始终固定（Frozen，静止魔法）的格子免疫解锁。</summary>
+        /// 始终固定（Frozen，静止魔法）与基岩（Bedrock，TASK-016）免疫解锁。</summary>
         private void Unlock(WorldGrid world, Vector3Int pos, CellMagicAttr magic, Vector2 velocity, bool attracted)
         {
             if (!world.TryGetCell(pos, out var cell)) return;
-            if (cell.Frozen)
+            if (IsImmovable(cell))
             {
-                Debug.Log($"[MagicCircuit] cell frozen, unlock ignored ({pos.x},{pos.y})");
+                Debug.Log($"[MagicCircuit] cell frozen/bedrock, unlock ignored ({pos.x},{pos.y})");
                 return;
             }
             if (!world.RemoveCell(pos)) return;
@@ -464,9 +475,9 @@ namespace TapCom.MagicCircuit
         private void RemoveDictCell(WorldGrid world, Vector3Int pos)
         {
             if (!world.TryGetCell(pos, out var cell)) return;
-            if (cell.Frozen)
+            if (IsImmovable(cell))
             {
-                Debug.Log($"[MagicCircuit] cell frozen, remove ignored ({pos.x},{pos.y})");
+                Debug.Log($"[MagicCircuit] cell frozen/bedrock, remove ignored ({pos.x},{pos.y})");
                 return;
             }
             var attr = cell.MagicAttr;

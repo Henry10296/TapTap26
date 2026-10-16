@@ -31,6 +31,7 @@ namespace TapCom.Presentation
         private List<GameObject> _dots;
         private Sprite _square;
         private PlayerInputReader _input;
+        private PlayerThrower _thrower; // TASK-016：投掷初速从序列化值取（与真实配置同源）；缺则回退 MagicParams
         private Camera _mainCamera;
         private LevelManager _levels;
         private WorldManager _worlds;
@@ -40,6 +41,7 @@ namespace TapCom.Presentation
         {
             _square = Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, 4f, 4f), new Vector2(0.5f, 0.5f), 4f);
             _input = GetComponentInParent<PlayerInputReader>();
+            _thrower = GetComponentInParent<PlayerThrower>();
             _levels = Services.Container.Get<LevelManager>();
             _worlds = Services.Container.Get<WorldManager>();
             Services.Container.TryGet(out _zeroQuery);
@@ -76,7 +78,9 @@ namespace TapCom.Presentation
             var pos = start;
             // 初速解算穿过指针点：与 OnSeedThrown 同一函数同一出点 ⇒ 预览=真实
             //（预览不含玩家速度继承的采样误差源：继承项在发布时已定，静止瞄准为主）
-            var vel = Ballistics.SolveThrowVelocity(start, aimWorld, dir);
+            // TASK-016：初速改读 PlayerThrower 序列化值（Ballistics 4 参重载）；模拟器侧仍走 3 参 const 版本，接线归 D 线
+            var throwSpeed = _thrower != null ? _thrower.ThrowSpeed : MagicParams.ThrowSpeed;
+            var vel = Ballistics.SolveThrowVelocity(start, aimWorld, dir, throwSpeed);
 
             // 线终于指针：弧线到达指针即收尾，末点钉在指针上，不再延伸（拍板「起点头顶、终点鼠标」）
             var toTarget = aimWorld - start;

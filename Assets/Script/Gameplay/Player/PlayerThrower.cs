@@ -7,16 +7,20 @@ namespace TapCom.Gameplay
     /// <summary>投掷魔力种子：瞄准方向 → 扣库存 → 发布 SeedThrownEvent。
     /// 铁律 #3/#4：只提交请求；落点、贴合、配方、效果全部由 Magic Circuit 系统负责。
     /// 出点 = ThrowPoint 头顶子物体（TASK-007 抛点契约：与 TrajectoryPreview 出点同源，预览=真实的前提）。
-    /// 2026-10-13 三改：①出手口预检前置到扣种子之前（贴墙/贴天花板拒投不再白扣种子；模拟器仍是权威，
-    /// 同帧竞态拒绝时以模拟器日志为准）②弹道目标点随事件下发（SeedThrownEvent.Target，解算归模拟器）③
-    /// 随机三色改「瞄准即定色」——瞄准开始/每次投出后掷定 CurrentSeedType（SeedIndicator 显示用），投出的即显示那颗。</summary>
+    /// 2026-10-13：出手口预检前置（拒投不白扣种子）+ 弹道目标点随事件下发。
+    /// TASK-016 切色：1/2/3 直接选蓝/红/黄、滚轮 ±1 循环（顺序 Blue→Red→Yellow）；
+    /// 所选颜色余 0 → 拒绝投掷且不消耗（UI 提示挂账）。随机三色降级为调试开关（默认关）。</summary>
     public class PlayerThrower : MonoBehaviour
     {
-        /// <summary>当前投掷的种子属性；M1 单类型默认蓝，多类型切换非本轮目标（design OQ#6）。</summary>
+        /// <summary>当前投掷的种子属性；1/2/3 与滚轮改写，SeedIndicator 轮询显示同一值。</summary>
         [SerializeField] private SeedMagicType _currentSeedType = SeedMagicType.Blue;
 
-        /// <summary>随机三色（配方测试用）；开启时瞄准开始/每次投出后重掷 CurrentSeedType，关掉则固定用 _currentSeedType。</summary>
-        [SerializeField] private bool _randomSeedType = true;
+        /// <summary>随机三色（调试用，TASK-016 默认关）；开启时瞄准开始/每次投出后重掷，手动切色不生效。</summary>
+        [SerializeField] private bool _randomSeedType = false;
+
+        /// <summary>投掷初速（TASK-016 Inspector 化）：默认 = MagicParams.ThrowSpeed（420 px/s ÷32）。
+        /// 仅经 TrajectoryPreview → Ballistics.SolveThrowVelocity(speed) 接线；模拟器侧接线归 D 线（改此值须同步）。</summary>
+        [SerializeField] private float _throwSpeed = MagicParams.ThrowSpeed;
 
         private static readonly SeedMagicType[] SeedTypes =
         {
@@ -27,6 +31,9 @@ namespace TapCom.Gameplay
 
         /// <summary>当前待投种子属性：SeedIndicator 显示的就是它，投出的就是显示那颗（拍板「瞄准即定色」）。</summary>
         public SeedMagicType CurrentSeedType { get; private set; }
+
+        /// <summary>投掷初速序列化值（TASK-016；TrajectoryPreview 接线读它，保证预览与配置同源）。</summary>
+        public float ThrowSpeed => _throwSpeed;
 
         /// <summary>头顶抛点；留空则 Awake 找名为 ThrowPoint 的子物体，再找不到回退 pivot（一次性告警）。</summary>
         [SerializeField] private Transform _throwPoint;
@@ -52,10 +59,22 @@ namespace TapCom.Gameplay
             var reader = _actor?.InputReader;
             if (reader == null) return;
 
-            // 进入瞄准（右键按下沿）掷定本次种子；显示与投出同源
-            var aiming = reader.AimHeld;
-            if (aiming && !_wasAiming) RollSeedType();
-            _wasAiming = aiming;
+            if (_randomSeedType)
+            {
+                // 调试旁路：进入瞄准（右键按下沿）掷定本次种子；显示与投出同源
+                var aiming = reader.AimHeld;
+                if (aiming && !_wasAiming) RollSeedType();
+                _wasAiming = aiming;
+            }
+            else
+            {
+                // TASK-016 手动切色：1/2/3 直接选，滚轮 ±1 循环（顺序 Blue→Red→Yellow，SeedTypes 数组序）
+                if (reader.SelectSeed1Pressed) SetSeedType(SeedMagicType.Blue);
+                else if (reader.SelectSeed2Pressed) SetSeedType(SeedMagicType.Red);
+                else if (reader.SelectSeed3Pressed) SetSeedType(SeedMagicType.Yellow);
+                else if (Mathf.Abs(reader.SeedScrollDelta) > 1e-3f)
+                    CycleSeedType(reader.SeedScrollDelta > 0f ? 1 : -1);
+            }
 
             if (!reader.ThrowPressed) return;
 
@@ -71,6 +90,13 @@ namespace TapCom.Gameplay
 
         private void TryThrow()
         {
+            // TASK-016：所选颜色余 0 → 拒绝投掷且不消耗（不做耗尽判定，UI 提示挂账）
+            if (_actor.Inventory.GetCount(CurrentSeedType) <= 0)
+            {
+                Debug.Log($"[PlayerThrower] 拒投：{CurrentSeedType} 种子余 0（不消耗，UI 提示挂账）", this);
+                return;
+            }
+
             var screen = _actor.InputReader.AimScreenPosition;
             // 正交 2D：把屏幕坐标投回 z=0 世界平面（铁律 #11）
             var planeDistance = -_mainCamera.transform.position.z;
@@ -95,6 +121,7 @@ namespace TapCom.Gameplay
                 Direction = dir,
                 Target = aimWorld,
                 PlayerVelocity = _motor != null ? _motor.Velocity : Vector2.zero,
+                Speed = _throwSpeed, // TASK-016：模拟器解算同源，保证预览=真实（数值可调）
             });
             RollSeedType(); // 投出即重掷：继续瞄准时显示的是下一颗
         }
@@ -104,6 +131,25 @@ namespace TapCom.Gameplay
             CurrentSeedType = _randomSeedType
                 ? SeedTypes[Random.Range(0, SeedTypes.Length)]
                 : _currentSeedType;
+            // TASK-018：HUD 指针同步（Awake 初始 / 随机瞄准重掷 / 投出后共用此口）
+            Services.EventBus.Publish(new SeedTypeChangedEvent { Type = CurrentSeedType });
+        }
+
+        /// <summary>TASK-016 手动切色：序列化字段与当前待投值同写（RollSeedType 非随机分支回读 _currentSeedType 不回退）。</summary>
+        private void SetSeedType(SeedMagicType type)
+        {
+            _currentSeedType = type;
+            CurrentSeedType = type;
+            Services.EventBus.Publish(new SeedTypeChangedEvent { Type = type }); // TASK-018：HUD 指针跟随 1/2/3 键与滚轮
+        }
+
+        /// <summary>TASK-016 滚轮循环：delta ±1，超出表尾绕回（Blue→Red→Yellow→Blue）。</summary>
+        private void CycleSeedType(int delta)
+        {
+            var index = System.Array.IndexOf(SeedTypes, CurrentSeedType);
+            if (index < 0) index = 0;
+            index = (index + delta % SeedTypes.Length + SeedTypes.Length) % SeedTypes.Length;
+            SetSeedType(SeedTypes[index]);
         }
 
         private bool TryGetWorld(out WorldGrid world)

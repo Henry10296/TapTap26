@@ -11,13 +11,14 @@ GameObject:
   - component: {fileID: 4983729474983664976}
   - component: {fileID: 8166413835350967402}
   - component: {fileID: 3157179819512850278}
+  - component: {fileID: 1314101571207220465}
   m_Layer: 5
   m_Name: CGPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &4983729474983664976
 RectTransform:
   m_ObjectHideFlags: 0
@@ -76,6 +77,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1314101571207220465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5434145226737389378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43737f85153c18b47a0a54a2f399a24a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _cgPanel: {fileID: 5434145226737389378}
+  _cgImage: {fileID: 3329488506540981799}
 --- !u!1 &6082767971568572045
 GameObject:
   m_ObjectHideFlags: 0
@@ -93,7 +108,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &3168970994699731738
 RectTransform:
   m_ObjectHideFlags: 0

@@ -72,21 +72,28 @@ namespace TapCom.MagicCircuit
             return found != null;
         }
 
+        /// <summary>原 3 参签名（TASK-016 保留：MagicCircuitSimulator 调用点不动），委托速度参数化重载走 MagicParams.ThrowSpeed。</summary>
+        public static Vector2 SolveThrowVelocity(Vector2 origin, Vector2 target, Vector2 dir)
+        {
+            return SolveThrowVelocity(origin, target, dir, MagicParams.ThrowSpeed);
+        }
+
         /// <summary>
-        /// 解算使抛物线恰好经过 target 的初速度（2026-10-13 拍板「弹道终于指针」，指哪打哪）。
-        /// 固定 ThrowSpeed、解低弧（直接）弹道角——初速方向一般略高于指针射线，靠重力下垂正好落在指针上
+        /// 重载（TASK-016）：投掷初速参数化（PlayerThrower._throwSpeed 序列化值经 TrajectoryPreview 传入），
+        /// 解算逻辑与 3 参版本完全一致。
+        /// 固定初速、解低弧（直接）弹道角——初速方向一般略高于指针射线，靠重力下垂正好落在指针上
         ///（v1「固定方向解速率」方向恒指向目标 → 垂直分量恒 0 → 恒回退，实为 no-op，已废弃）。
         /// 目标超出该速度射程（判别式 &lt; 0）时抬到最低可达速度 s²=g(y+√(x²+y²))，仍终到指针。
         /// 极远目标受 Step 内 VelCap 钳制会略短——预览与真实走同一函数同一步进，预览=真实不破坏。
         /// </summary>
-        public static Vector2 SolveThrowVelocity(Vector2 origin, Vector2 target, Vector2 dir)
+        public static Vector2 SolveThrowVelocity(Vector2 origin, Vector2 target, Vector2 dir, float throwSpeed)
         {
             var d = dir.sqrMagnitude < 1e-6f ? Vector2.right : dir.normalized;
             var delta = target - origin;
-            if (delta.sqrMagnitude < 1e-6f) return d * MagicParams.ThrowSpeed; // 指针贴着出点：无弹道可言
+            if (delta.sqrMagnitude < 1e-6f) return d * throwSpeed; // 指针贴着出点：无弹道可言
 
             var g = MagicParams.Gravity;
-            var s = MagicParams.ThrowSpeed;
+            var s = throwSpeed;
             var x = Mathf.Abs(delta.x);
             var y = delta.y;
 

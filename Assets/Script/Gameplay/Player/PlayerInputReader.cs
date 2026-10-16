@@ -17,6 +17,10 @@ namespace TapCom.Gameplay
         private InputAction _throwAction;
         private InputAction _aimAction;
         private InputAction _aimHoldAction;
+        private InputAction _selectSeed1Action;
+        private InputAction _selectSeed2Action;
+        private InputAction _selectSeed3Action;
+        private InputAction _seedScrollAction;
 
         /// <summary>移动轴（WASD / 方向键）。</summary>
         public Vector2 MoveInput => _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
@@ -32,6 +36,18 @@ namespace TapCom.Gameplay
 
         /// <summary>按住右键瞄准中（轨迹预览显示开关，TASK-007）。</summary>
         public bool AimHeld => _aimHoldAction != null && _aimHoldAction.IsPressed();
+
+        /// <summary>本帧按下选蓝种子（键盘 1，TASK-016）。</summary>
+        public bool SelectSeed1Pressed => _selectSeed1Action != null && _selectSeed1Action.WasPressedThisFrame();
+
+        /// <summary>本帧按下选红种子（键盘 2，TASK-016）。</summary>
+        public bool SelectSeed2Pressed => _selectSeed2Action != null && _selectSeed2Action.WasPressedThisFrame();
+
+        /// <summary>本帧按下选黄种子（键盘 3，TASK-016）。</summary>
+        public bool SelectSeed3Pressed => _selectSeed3Action != null && _selectSeed3Action.WasPressedThisFrame();
+
+        /// <summary>滚轮滚动增量 y（TASK-016；<Mouse>/scroll 的 Vector2.y，滚动一下非零、松开回 0，按符号判方向）。</summary>
+        public float SeedScrollDelta => _seedScrollAction != null ? _seedScrollAction.ReadValue<Vector2>().y : 0f;
 
         private void Awake()
         {
@@ -50,6 +66,10 @@ namespace TapCom.Gameplay
             _throwAction = _playerMap.FindAction("Throw");
             _aimAction = _playerMap.FindAction("Aim");
             _aimHoldAction = _playerMap.FindAction("AimHold");
+            _selectSeed1Action = _playerMap.FindAction("SelectSeed1");
+            _selectSeed2Action = _playerMap.FindAction("SelectSeed2");
+            _selectSeed3Action = _playerMap.FindAction("SelectSeed3");
+            _seedScrollAction = _playerMap.FindAction("SeedScroll");
         }
 
         private void OnEnable() => _playerMap?.Enable();

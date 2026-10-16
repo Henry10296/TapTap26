@@ -50,6 +50,23 @@ namespace TapCom.Gameplay
         /// <summary>玩家出生点（格子坐标；关卡编辑器用 SpawnTile 笔刷画，导出时写入）。</summary>
         public Vector3Int SpawnPoint;
 
+        /// <summary>终点格子坐标（TASK-015；EndTile 笔刷导出写入；(0,0,0) = 本关无终点）。</summary>
+        public Vector3Int GoalPoint;
+
+        /// <summary>开场 CG 图（TASK-015 配置项；null = 本关无 CG，直接运镜进 Playing）。</summary>
+        public Sprite CgImage;
+
+        /// <summary>本关限时（秒，TASK-017；0 = 不限时，计时器隐藏）。</summary>
+        public float TimeLimit;
+
+        /// <summary>本关初始种子数（TASK-019 每关自配；0 = 该色 0 颗，Inspector 手填）。</summary>
+        public int BlueSeeds;
+        public int RedSeeds;
+        public int YellowSeeds;
+
+        /// <summary>关卡网格范围（TASK-015；导出时按 Tilemap 已用格并集计算，玩家相机边缘钳制用）。</summary>
+        public BoundsInt GridBounds;
+
         /// <summary>背景装饰层（TASK-015）：编辑器从 Background_* Tilemap 导出，运行时由 BackgroundLayerLoader 重建。</summary>
         public List<BackgroundLayerDef> BackgroundLayers = new List<BackgroundLayerDef>();
     }

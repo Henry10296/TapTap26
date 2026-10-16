@@ -106,6 +106,7 @@ MonoBehaviour:
   _blueSprite: {fileID: 21300000, guid: bed65d9e14e542e4f825e9ba8c234902, type: 3}
   _redSprite: {fileID: 21300000, guid: 9ebafcd86dc20904d8bd83f1f9526437, type: 3}
   _yellowSprite: {fileID: 21300000, guid: 58c80c6d8d6637e4885bbba865788383, type: 3}
+  _bedrockSprite: {fileID: 21300000, guid: 22c2a6be848befc40975e0b9509e030b, type: 3}
 --- !u!61 &5144747530245295501
 BoxCollider2D:
   m_ObjectHideFlags: 0

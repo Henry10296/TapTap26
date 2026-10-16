@@ -2,17 +2,20 @@ using TapCom.Core;
 using UnityEngine;
 namespace TapCom.Gameplay
 {
-    /// <summary>玩家资源：各属性种子库存（tech-spec §2 增补；截图初值 蓝×2 / 红×2 / 黄×4）。
-    /// M1 无限开关（2026-10-09 拍板）：开启时消耗恒通过、计数不动，验证回路不被补给卡住。</summary>
+    /// <summary>玩家资源：各属性种子库存（tech-spec §2 增补）。
+    /// TASK-019：每关初始数量由 LevelData 自配，PlayerSpawner 生成玩家后 ApplyLevelSeeds 注入
+    /// （旧实例连同扣减一起销毁，重载天然干净；字段序列化值仅 Inspector 占位）。
+    /// 无限开关保留做调试（2026-10-09 拍板：开启时消耗恒通过、计数不动），默认关。
+    /// 种子耗尽判定不做（TASK-016 拍板暂不，只拒绝投掷）。</summary>
     public class PlayerInventory : MonoBehaviour
     {
-        [SerializeField] private bool _infiniteSeeds = true;
+        [SerializeField] private bool _infiniteSeeds = false;
 
-        [SerializeField] private int _blueSeeds = 2;
+        [SerializeField] private int _blueSeeds = 3;
 
-        [SerializeField] private int _redSeeds = 2;
+        [SerializeField] private int _redSeeds = 3;
 
-        [SerializeField] private int _yellowSeeds = 4;
+        [SerializeField] private int _yellowSeeds = 3;
 
         /// <summary>查询某属性种子余量。</summary>
         public int GetCount(SeedMagicType type) => type switch
@@ -44,6 +47,27 @@ namespace TapCom.Gameplay
             return true;
         }
 
+        /// <summary>按关卡数据覆盖三色初始库存并全量发布（TASK-019；PlayerSpawner 生成玩家后调用，0 = 该色 0 颗）。</summary>
+        public void ApplyLevelSeeds(LevelData data)
+        {
+            if (data == null) return;
+            _blueSeeds = data.BlueSeeds;
+            _redSeeds = data.RedSeeds;
+            _yellowSeeds = data.YellowSeeds;
+            PublishCount(SeedMagicType.Blue);
+            PublishCount(SeedMagicType.Red);
+            PublishCount(SeedMagicType.Yellow);
+            Debug.Log($"[PlayerInventory] 关卡种子：Blue {data.BlueSeeds} / Red {data.RedSeeds} / Yellow {data.YellowSeeds}", this);
+        }
+
+        private void Start()
+        {
+            // TASK-018：HUD 常驻场景而本组件随玩家每关重建，初始库存全量发布一次（订阅方拿到即绑）
+            PublishCount(SeedMagicType.Blue);
+            PublishCount(SeedMagicType.Red);
+            PublishCount(SeedMagicType.Yellow);
+        }
+
         private void SetCount(SeedMagicType type, int value)
         {
             switch (type)
@@ -52,6 +76,13 @@ namespace TapCom.Gameplay
                 case SeedMagicType.Red: _redSeeds = value; break;
                 case SeedMagicType.Yellow: _yellowSeeds = value; break;
             }
+            PublishCount(type);
+        }
+
+        /// <summary>库存变化唯一发布口（TASK-018：SeedHud 据此写数量文本）。</summary>
+        private void PublishCount(SeedMagicType type)
+        {
+            Services.EventBus.Publish(new SeedCountChangedEvent { Type = type, Count = GetCount(type) });
         }
     }
 }

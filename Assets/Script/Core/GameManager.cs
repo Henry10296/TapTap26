@@ -43,11 +43,12 @@ namespace TapCom.Core
             {
                 { GameState.Initializing, new[] { GameState.TitleScreen, GameState.Loading } },
                 { GameState.TitleScreen, new[] { GameState.Loading } },
-                { GameState.Loading, new[] { GameState.Playing } },
-                { GameState.Playing, new[] { GameState.Paused, GameState.Victory, GameState.Defeat, GameState.TitleScreen } },
-                { GameState.Paused, new[] { GameState.Playing } },
+                { GameState.Loading, new[] { GameState.Playing, GameState.Cg } },
+                { GameState.Cg, new[] { GameState.Playing } },
+                { GameState.Playing, new[] { GameState.Paused, GameState.Victory, GameState.Defeat, GameState.Loading, GameState.TitleScreen } },
+                { GameState.Paused, new[] { GameState.Playing, GameState.TitleScreen } },
                 { GameState.Victory, new[] { GameState.Loading, GameState.TitleScreen } },
-                { GameState.Defeat, new[] { GameState.Loading } },
+                { GameState.Defeat, new[] { GameState.Loading, GameState.TitleScreen } },
             };
 
         private readonly EventBus _bus;
@@ -78,9 +79,20 @@ namespace TapCom.Core
             }
             var from = Current;
             Current = next;
+            // TASK-016：静止态（CG 演出/暂停/结算）冻结世界——Time.timeScale=0 使 Unity 物理
+            // 与 TickManager（CoreDriver 按 Time.deltaTime 驱动，CoreBootstrap.cs:82）同时停摆；
+            // 相机与 UI 侧一律用 unscaled 时间（C 线契约）。
+            Time.timeScale = IsFrozenState(next) ? 0f : 1f;
             Debug.Log($"[Core] GameState: {from} -> {next}");
             _bus.Publish(new GameStateChangedEvent(from, next));
             return true;
+        }
+
+        /// <summary>该状态下世界是否静止（TASK-016）。</summary>
+        public static bool IsFrozenState(GameState state)
+        {
+            return state == GameState.Cg || state == GameState.Paused
+                || state == GameState.Victory || state == GameState.Defeat;
         }
     }
 }
