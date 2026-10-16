@@ -95,6 +95,7 @@ namespace TapCom.Presentation
         /// <summary>进 Cg：有图且本会话未播过 → 显示图等输入；否则直接开运镜（图不再显示，流程仍走 IntroStarted）。</summary>
         private void BeginIntro()
         {
+            Debug.Log($"[CgController] TEMP-DIAG BeginIntro: dataNull={_data == null}, cgImageNull={_data == null || _data.CgImage == null}, worldId=[{_worldId}], shownCount={_shownWorlds.Count}");
             var fresh = _data != null && _data.CgImage != null
                         && !string.IsNullOrEmpty(_worldId) && !_shownWorlds.Contains(_worldId);
             if (!fresh)
