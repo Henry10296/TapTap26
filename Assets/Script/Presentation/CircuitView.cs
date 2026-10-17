@@ -23,6 +23,9 @@ namespace TapCom.Presentation
         [SerializeField] private Sprite _redSprite;
         [SerializeField] private Sprite _yellowSprite;
 
+        [Header("蓄能高亮（2026-10-17 拍板：纯白覆盖改高亮，强度可调）")]
+        [SerializeField] private Color _chargeHighlight = new Color(1f, 1f, 1f, 0.35f); // 盖在方块上的高亮色；alpha=强度（0=不可见，1=旧行为纯白覆盖）
+
         private readonly Dictionary<Vector3Int, CellActor> _cellViews = new Dictionary<Vector3Int, CellActor>();
         private readonly Dictionary<int, CellActor> _moverActors = new Dictionary<int, CellActor>(); // 运动格本体：同一 CellActor 从静止视图转入运动视图（不换皮）
         private readonly List<GameObject> _seedViews = new List<GameObject>();
@@ -170,6 +173,7 @@ namespace TapCom.Presentation
                     _chargeViews[pos] = view;
                 }
                 view.SetActive(true);
+                view.GetComponent<SpriteRenderer>().color = _chargeHighlight; // 每帧刷：运行中调 Inspector 即时生效
                 view.transform.position = new Vector3(pos.x + 0.5f, pos.y + 0.5f, 0f);
             }
         }

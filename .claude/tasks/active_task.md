@@ -680,9 +680,8 @@ Core 运行框架：GameManager（GameState 状态机 + Service 容器）、Tick
 ## Next Steps
 
 1. 用户 review spec-board 与状态语义拍板。
-2. 拍板后固化全局 skill：`~/.claude/skills/notion-spec-sync/SKILL.md`（流程=拉取/清单/分析三段，含抓取细节备忘 6 条）。
-3. （可选）skill 加「与上次快照 diff」段，增量看需求变化。
-4. P0 可开工项收缩为：结晶方块本体（真代码）+ 背景方块（语义对照后可能零代码）；TASK-015 是否按此收缩范围开工，待用户拍板。
+2. **v2 已固化（2026-10-17）**：工作流四段闭环（①拉取视图 ②沟通讨论=显式停点 ③活跃项追踪账本 ④审查/澄清/归档）。用户拍板：直接固化 / 审查随拉取自动带 / 只追活跃项。skill 落位 `~/.claude/skills/notion-spec-sync/SKILL.md`，触发词「拉策划案 / spec-sync」。下次会话生效（hooks/技能启动时快照）。
+3. P0 可开工项收缩为：结晶方块本体（真代码）+ 背景方块（TASK-015 已开工，CODING 待验收）。
 
 ---
 
@@ -948,3 +947,46 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
   结论：此前"没看到 CG"= 配置未生效走了无图跳过分支（图从未显示），非"闪一下"。现配置已对，重进应正常。可选调整（去空格/加提示/最短显示时长）待用户明确要求。
 - 2026-10-16｜TASK-020#3 用户主张"配置在先"的裁定｜已核验：Level_02.asset 磁盘 mtime=今日 17:07:53（Unity 保存 Inspector 改动才写盘）。跳过分支的运行时 CgImage 读空 ⇒ 那次运行时载入对象无有效 CgImage ⇒ 该运行早于任一 CgImage 值（黄种子/CG_Openning）写盘生效，或所贴日志为 Console 历史缓存（无时间戳）。若更早保存的黄种子值在运行时已生效，应显示种子图而非跳过——跳过本身即反证。决定性验证=现在重跑第 1 关：显 CG 即结案；仍跳过则查运行时引用失效（届时提议加临时日志，需用户批准）。
 - 2026-10-16｜TASK-020#3 临时诊断日志已插入（用户拍板"加一行临时日志"）｜已核验：CgController.cs:98 于 BeginIntro 开头插入 TEMP-DIAG 一行，打印 dataNull/cgImageNull/worldId/shownCount 四真值；插入位置 awk 验证无误。二次运行日志（playingId=488，晚于 17:07:53 保存）仍走跳过分支 ⇒ 运行时 _data.CgImage 判空，与磁盘（CgImage=CG_Openning 引用有效）矛盾 ⇒ 判定编辑器内存对象与磁盘不同步或引用失效；日志中 ~UnityDirMonSyncFile~ 报错佐证文件监视器异常。待用户重跑回传 TEMP-DIAG 行后定位；定位后删除该行。
+- 2026-10-17｜TASK-020#3 结案回写（meta 会话补录，前次会话 context 耗尽未及写入；证据源 = 67657cd3 transcript 19:29–19:34 段 + TEMP-DIAG 运行时日志）｜已核验（运行时 TEMP-DIAG + 场景 YAML）：
+  **前述「配置未生效/写盘时序」判定作废**（本文件上一条 19:22 的结论）。TEMP-DIAG 实测：一次进关 `BeginIntro` 跑两遍——第 1 遍 shownCount=0 正常显图，第 2 遍 shownCount=1 走"已播过"分支 → StartCameraIntro 隐藏图 + 同帧 Cg→Playing。用户首报（16:39「cg 似乎没有根据配置播放」）方向正确，此前三轮否定（17:15 / 18:36 / 18:50）均误。
+  根因 = Game.unity UIRoot 散落旧 CgController（scene object 66347178，即上文「面板自杀」项中待删的那份）与 CGPanel prefab 份双订阅，OnStateChanged 同帧触发两次。与 10-16 凌晨已入账的双订阅诊断同源，晚间会话未对表。
+  待办不变：①用户删 UIRoot 旧 CgController ②删除 CgController.cs:98 的 TEMP-DIAG 诊断行（定位完成，该删了）③编译 + 回归：第 1 关进关显 CG、点击后开玩。#1 基岩规则仍待拍板。
+
+---
+
+## 2026-10-17 研究快照：用户 5 项反馈（1 景深背景 / 2 手册 / 3 魔法范围 / 4 R键重置 / 5 被方块砸死）
+
+**Status: RESEARCH（轻量轨；本轮纯读码，未写任何代码；3 个决策点待拍板）**
+
+### 逐项现状 + 证据（全部读码 / prefab YAML，未 runtime 验证）
+
+1. **景深背景**：现状=BackgroundLayerLoader 按关卡重建 Tilemap 背景（Level_02.asset / TestWorld.asset 已配 backgroundLayers）。用户拍板形态=一张图固定相机作为背景。纯人工步骤，零代码。
+2. **手册**：HandbookPanel 已挂 Hud.prefab「HandBook」物体（_panel→自身，Hud.prefab:886）；**全 Hud.prefab 无任何 Button 组件、0 处 m_MethodName onClick** → 没有入口调 Toggle，Start 自藏后永远打不开。自挂也与脚本注释设计（挂常驻物体+独立全屏面板）不符。Arts/Level/Hud 仅有图标图（Hud_HandBook_02_ / Hud_HandBook_Default_V0），无全屏手册图。修法=人工重构+接线，零代码。
+3. **魔法范围**：通路现成——SpellCastEvent{Type,Center} 已发布（MagicCircuitSimulator.cs:370；AudioManager、PlayerCameraRig 已订阅），半径表 MagicParams（Zero 2.5 / Blast 3.5 / Attract 4.5 / Static 2.5）。缺视觉订阅方 → 新小组件（LineRenderer 画圆，仿 TrajectoryPreview 运行时白图先例）+ 人工挂载 1 步。待拍板后编码。
+4. **重置**：ResetButton 已挂 Hud.prefab「Reset」物体（Hud.prefab:836）但无 Button/无接线 → 点击无效；GameState.prefab「ReSetButton」同样 0 接线（VictoryPanel 只 AddListener 了 NextButton）。R键=ResetButton.Update 加 Keyboard 轮询（1 文件小改，待拍板）。
+5. **被方块砸死**：判定链完整且已挂载——PlayerCrushDetector 在 Player.prefab 根（首个 !u!1 块）→ FailTriggeredEvent{Crush}（PlayerCrushDetector.cs:45）；Fall=PlayerMotor.cs:86、TimeUp=LevelTimer.cs:62 同事件。**缺口=全库无 FailTriggeredEvent 的 UI 消费者**：DefeatPanel.cs 写完但 0 挂载（grep 全 prefab/场景无命中）；VictoryPanel（已挂 GameState.prefab，内含「image（在LevelClear和gameover两张图切换）」+NextButton+ReSetButton）只处理 Victory。现状=被砸死仅相机大震（PlayerCameraRig.cs:298），无面板、无状态切换、无重开。
+
+### Open Questions（拍板后编码）
+
+- #4 形态：R键 / 点击 / 两者。
+- #5 方案：扩展 VictoryPanel（切 gameover 图 + ReSetButton 重开，推荐，符合 prefab 既有搭建）vs 挂现成 DefeatPanel（无图切换，与 prefab 设计不符）。
+- #3 编码批准：SpellRangeIndicator 新文件 + 人工挂载 1 步。
+
+### Next Steps
+
+1. 用户拍板 3 项 → 按批准范围编码（预计 ≤2 文件）。
+2. 人工步骤清单（#1 背景 / #2 手册重构 / #4 按钮接线 / #5 拖引用）随编码一并给出。
+
+- 2026-10-17｜5 项反馈拍板（AskUserQuestion）：#4 重置=两者都要（R 键+按钮接线）；#5 失败 UI=扩展 VictoryPanel（切图+ReSetButton 重开）；#3 魔法范围=现在写｜已核验（用户答复）
+- 2026-10-17｜CODING：3 文件改动落盘｜已核验（Write 成功 + git diff --stat）：
+  ① ResetButton.cs 加 Update() 轮询 Keyboard.rKey → 同一 ResetLevel 路径（新 Input System 直读，不改 InputSystem_Actions）；
+  ② VictoryPanel.cs 扩展：+Subscribe FailTriggeredEvent → TrySetState(Defeat) → ApplySprite(_defeatSprite) → Show；OnStateChanged 离开 Victory/Defeat 双态隐藏；+_resultImage/_victorySprite/_defeatSprite/_resetButton 字段 + ResetLevel()（Reload）；
+  ③ 新增 SpellRangeIndicator.cs：订 SpellCastEvent → 白图点阵圆圈（复刻 TrajectoryPreview Sprite.Create 先例，URP 下零材质风险，LineRenderer 方案因 URP 17 弃用）；半径取 MagicParams（Zero2.5/Blast3.5/Attract4.5/Static2.5）；场类（虚空/引力）显 FieldDuration=5s，瞬时（爆炸/静止）显 _flashDuration=0.35s。
+- 2026-10-17｜URP 17.0.4 确认（Packages/manifest.json com.unity.render-pipelines.universal）→ LineRenderer+Sprites/Default 有粉红风险，改点阵 SpriteRenderer 默认材质方案｜已核验（manifest 读到）
+- 2026-10-17｜**未编译/未 runtime**（本会话不开 Unity Editor）：3 文件待 Unity 聚焦后编译；点阵 sortingOrder=10 能否压过 CellActor/背景层待 runtime 看，可 Inspector 调｜inference（显式登记）
+- 2026-10-17｜人工清单（随验收做）：① 景深背景：SpriteRenderer 背景图挂 Main Camera 子节点（z≈10、Sorting Order=-100，勿放 Overlay HUD Canvas）；② 手册：HandbookPanel 从 HandBook 图标挪到 Hud 根常驻节点、新建全屏手册图面板（图需自备，Arts 仅 Hud_HandBook_02_/Default_V0 两张图标图）、_panel 拖新面板、HandBook 图标加 Button→onClick→HandbookPanel.Toggle；③ Reset 按钮：Hud.prefab「Reset」物体加 Button→onClick→ResetButton.ResetLevel；④ 魔法范围：SpellRangeIndicator 挂 Game/SampleScene 常驻节点（缩放 1）；⑤ 结算面板（两场景 GameState 实例都做）：VictoryPanel 拖 _resultImage（两图切换那张 Image）/_victorySprite（LevelClear）/_defeatSprite（gameover）/_resetButton（ReSetButton 的 Button，无 Button 组件则补加）。
+- 2026-10-17｜编译错误修复：ResetButton.cs(25) CS1955——ButtonControl.wasPressedThisFrame 是属性非方法（与 InputAction.WasPressedThisFrame() 方法混淆），去括号 sed 修复，grep 验证已改｜已核验（grep 输出）；整文件编译待用户 Unity 侧确认
+- 2026-10-17｜用户拍板拆除魔法范围圈（"目前魔法触发会产生图片，拆除"）：SpellRangeIndicator.cs + .meta 已删（文件未提交过，内容见本文件上文 2026-10-17 CODING 条目可随时重写）；人工步骤 #4 作废；排除法依据=CircuitView 白图/种子图清理逻辑完备无残留，SpellCastEvent 视觉订阅者仅此组件，"目前"锚定新近变化｜已核验（rm 后 ls 无文件）
+- 2026-10-17｜遗留：若用户已在场景挂载 SpellRangeIndicator，Unity 里组件会变 Missing Script，需人工移除该组件（场景 Game.unity/SampleScene.unity 常驻节点）
+- 2026-10-17｜用户澄清（"？？？我的要求是产生范围"）：上轮拆错对象——范围圈要保留，要改的是蓄能纯白覆盖图。执行：① SpellRangeIndicator.cs 原样恢复（.meta 新 GUID：若场景已挂过旧组件会显示 Missing Script，需人工移除后重挂；未挂过则按原步骤挂）；② CircuitView.cs 两处改：+[Header 蓄能高亮] _chargeHighlight 字段（Color，默认 (1,1,1,0.35)）+ SyncCharges 每帧刷 view color（GetComponent<SpriteRenderer>）——alpha 即高亮强度，0.35=提亮，1=旧纯白覆盖，运行中 Inspector 可调即时生效｜已核验（git diff 两处 hunk 落盘）
+- 2026-10-17｜证据补充：蓄能白图=SyncCharges 每帧对 PendingCasts 组的格子盖 0.94 白块（CircuitView.cs:161-175），即用户所说"触发产生的图片"；飞行种子图/运动格清理逻辑完备无残留｜已核验（全文读过）
