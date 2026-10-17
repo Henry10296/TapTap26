@@ -45,6 +45,8 @@ namespace TapCom.Gameplay
         private WorldManager _worlds;
         private bool _wasAiming;
         private bool _throwPointWarned;
+        private GameManager _game;
+        private int _lastNonPlayingFrame = int.MinValue; // 最近一次非 Playing 帧号：切回 Playing 首帧吞点击用（2026-10-17）
 
         private void Awake()
         {
@@ -58,6 +60,17 @@ namespace TapCom.Gameplay
         {
             var reader = _actor?.InputReader;
             if (reader == null) return;
+
+            // 2026-10-17 修 bug（CG 点击穿透）：非 Playing 态不处理任何投掷输入。
+            // 跳过 CG / 暂停恢复的那一下点击发生在状态切换帧内，CgController 与本类 Update 顺序不定，
+            // 故切换后首帧再吞一次点击——保证「跳过 CG 的那一下」无论组件先后都带不出种子。
+            if (_game == null) _game = Services.Container.Get<GameManager>();
+            if (_game.Current != GameState.Playing)
+            {
+                _lastNonPlayingFrame = Time.frameCount;
+                return;
+            }
+            if (Time.frameCount == _lastNonPlayingFrame + 1) return;
 
             if (_randomSeedType)
             {

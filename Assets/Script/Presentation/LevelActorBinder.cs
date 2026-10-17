@@ -15,6 +15,7 @@ namespace TapCom.Presentation
 
         private readonly List<CellActor> _actors = new List<CellActor>();
         private readonly Dictionary<Vector3Int, CellActor> _actorByPos = new Dictionary<Vector3Int, CellActor>();
+        private readonly Dictionary<Vector3Int, Sprite> _spriteByPos = new Dictionary<Vector3Int, Sprite>(); // 本关数据贴图（2026-10-17：一个 prefab + 每 tile 数据）
 
         private void OnEnable()
         {
@@ -37,10 +38,14 @@ namespace TapCom.Presentation
             }
 
             Clear();
+            _spriteByPos.Clear();
+            if (e.Data != null)
+                foreach (var def in e.Data.Cells)
+                    if (def.Sprite != null) _spriteByPos[def.Pos] = def.Sprite;
             foreach (var cell in e.World.Cells)
             {
                 var actor = Instantiate(_cellActorPrefab, transform);
-                actor.Bind(cell);
+                actor.Bind(cell, _spriteByPos.TryGetValue(cell.Position, out var dataSprite) ? dataSprite : null);
                 _actors.Add(actor);
                 _actorByPos[cell.Position] = actor;
             }
@@ -89,6 +94,9 @@ namespace TapCom.Presentation
             actor = null;
             return false;
         }
+
+        /// <summary>按位置查询初始格本体（只读，不取走；蓄能闪烁等表现查询用，2026-10-17）。</summary>
+        public bool TryGet(Vector3Int pos, out CellActor actor) => _actorByPos.TryGetValue(pos, out actor);
 
         /// <summary>清理自己名下的表现物（不销毁数据，不碰别人对象）。</summary>
         private void Clear()

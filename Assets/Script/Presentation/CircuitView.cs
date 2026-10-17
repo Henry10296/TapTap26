@@ -7,7 +7,7 @@ using UnityEngine;
 namespace TapCom.Presentation
 {
     /// <summary>
-    /// M1 动态表现（TASK-007 §8 第 9 步）：字典格=CellActor 实例、飞行种子=小图、运动格=格子图、蓄能组=白图高亮。
+    /// M1 动态表现（TASK-007 §8 第 9 步）：字典格=CellActor 实例、飞行种子=小图、运动格=格子图、蓄能组=本体颜色闪烁。
     /// 离散变化订阅 CellWorldChangedEvent；持续运动每帧拉模拟器快照（不逐步发事件）。
     /// 落定格实例化 CellActor 预制体并放进 CompositeCollider2D 宿主层级（_cellParent 拖 LevelActorBinder 物体），
     /// 与关卡初始格同款贴图与碰撞——投掷落格=正式岩石格（数据层落定即 Locked，铁律 #9）。只读模拟器与事件，绝不回写（铁律 #2/#6）。
@@ -23,13 +23,17 @@ namespace TapCom.Presentation
         [SerializeField] private Sprite _redSprite;
         [SerializeField] private Sprite _yellowSprite;
 
-        [Header("蓄能高亮（2026-10-17 拍板：纯白覆盖改高亮，强度可调）")]
-        [SerializeField] private Color _chargeHighlight = new Color(1f, 1f, 1f, 0.35f); // 盖在方块上的高亮色；alpha=强度（0=不可见，1=旧行为纯白覆盖）
+        [Header("蓄能闪烁（2026-10-17 拍板：不盖图，方块本体颜色脉动）")]
+        [SerializeField] private Color _flashColor = new Color(1f, 0.85f, 0.3f); // 峰值色（白⇄峰值往返脉动）
+        [SerializeField] private float _flashPeriod = 0.4f;                      // 闪烁周期（秒，白⇄峰值一个来回）
 
         private readonly Dictionary<Vector3Int, CellActor> _cellViews = new Dictionary<Vector3Int, CellActor>();
         private readonly Dictionary<int, CellActor> _moverActors = new Dictionary<int, CellActor>(); // 运动格本体：同一 CellActor 从静止视图转入运动视图（不换皮）
         private readonly List<GameObject> _seedViews = new List<GameObject>();
-        private readonly Dictionary<Vector3Int, GameObject> _chargeViews = new Dictionary<Vector3Int, GameObject>();
+        private readonly Dictionary<Vector3Int, SpriteRenderer> _flashing = new Dictionary<Vector3Int, SpriteRenderer>(); // 蓄能闪烁中的本体渲染器
+        private readonly HashSet<Vector3Int> _flashSet = new HashSet<Vector3Int>(); // 本帧蓄能格集合（对账基准）
+        private readonly List<Vector3Int> _staleFlash = new List<Vector3Int>();     // 退出闪烁的格子（先收集后清，防遍历中改容器）
+        private float _flashTime;
         private readonly HashSet<int> _staleIds = new HashSet<int>();
         private MagicCircuitSimulator _simulator;
         private LevelActorBinder _binder;
@@ -66,8 +70,8 @@ namespace TapCom.Presentation
             _cellViews.Clear();
             foreach (var view in _moverActors.Values) Destroy(view.gameObject);
             _moverActors.Clear();
-            foreach (var view in _chargeViews.Values) Destroy(view);
-            _chargeViews.Clear();
+            foreach (var r in _flashing.Values) if (r != null) r.color = Color.white; // 闪烁复位（本体多半随重建消失，保险）
+            _flashing.Clear();
         }
 
         private void OnCellChanged(CellWorldChangedEvent e)
@@ -161,21 +165,44 @@ namespace TapCom.Presentation
             }
         }
 
+        /// <summary>蓄能闪烁（2026-10-17 拍板：不盖图）：按本帧 PendingCasts 对账，
+        /// 新进格子找本体开闪、退出格子复位 Color.white（CellActor 从不写 color，white 即原始态）。</summary>
         private void SyncCharges()
         {
-            foreach (var view in _chargeViews.Values) view.SetActive(false);
+            _flashTime += Time.deltaTime;
+            _flashSet.Clear();
             foreach (var pending in _simulator.PendingCasts)
             foreach (var pos in pending.Cells)
-            {
-                if (!_chargeViews.TryGetValue(pos, out var view))
+                _flashSet.Add(pos);
+
+            foreach (var pos in _flashSet)
+                if (!_flashing.ContainsKey(pos))
                 {
-                    view = NewSquare(Vector3.one * 0.94f, _square, ChargeSortingOrder);
-                    _chargeViews[pos] = view;
+                    var renderer = RendererAt(pos);
+                    if (renderer != null) _flashing[pos] = renderer;
                 }
-                view.SetActive(true);
-                view.GetComponent<SpriteRenderer>().color = _chargeHighlight; // 每帧刷：运行中调 Inspector 即时生效
-                view.transform.position = new Vector3(pos.x + 0.5f, pos.y + 0.5f, 0f);
+
+            _staleFlash.Clear();
+            foreach (var kv in _flashing)
+                if (!_flashSet.Contains(kv.Key) || kv.Value == null) _staleFlash.Add(kv.Key);
+            foreach (var pos in _staleFlash)
+            {
+                if (_flashing.TryGetValue(pos, out var stale) && stale != null) stale.color = Color.white;
+                _flashing.Remove(pos);
             }
+
+            // 白⇄峰值色正弦脉动
+            var t = 0.5f + 0.5f * Mathf.Sin(_flashTime * Mathf.PI * 2f / Mathf.Max(_flashPeriod, 0.01f));
+            foreach (var r in _flashing.Values)
+                if (r != null) r.color = Color.Lerp(Color.white, _flashColor, t);
+        }
+
+        /// <summary>按格位找方块本体渲染器：动态格在 _cellViews，初始格查 binder（TryGet 只读）。</summary>
+        private SpriteRenderer RendererAt(Vector3Int pos)
+        {
+            if (_cellViews.TryGetValue(pos, out var actor)) return actor.GetComponent<SpriteRenderer>();
+            if (_binder != null && _binder.TryGet(pos, out var binderActor)) return binderActor.GetComponent<SpriteRenderer>();
+            return null;
         }
 
         /// <summary>落定格 = CellActor 实例（贴图+碰撞），放进 _cellParent 层级被 CompositeCollider2D 收编。</summary>
@@ -195,10 +222,6 @@ namespace TapCom.Presentation
             actor.Bind(pos, attr);
             _cellViews[pos] = actor;
         }
-
-        /// <summary>蓄能白块排序：显式压过方块贴图——双方块 z=0 同 order 时 Unity 排序未定义，
-        /// 白块「有时」被盖住 = 看不到预备效果直接反应（2026-10-13 修复）。</summary>
-        private const int ChargeSortingOrder = 10;
 
         private GameObject NewSquare(Vector3 scale, Sprite sprite, int sortingOrder = 0)
         {

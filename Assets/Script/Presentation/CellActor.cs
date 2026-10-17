@@ -29,16 +29,23 @@ namespace TapCom.Presentation
         }
 
         /// <summary>绑定 Cell 数据并刷新占位外观。</summary>
-        public void Bind(Cell cell) => Bind(cell.Position, cell.MagicAttr, cell.Type);
+        public void Bind(Cell cell, Sprite sprite = null) => Bind(cell.Position, cell.MagicAttr, cell.Type, sprite);
 
         /// <summary>绑定位置与魔法属性（动态落定格无 Cell 实例时用，如 CircuitView 生成投掷落格）。
         /// type 缺省 Rock：动态落格恒为岩石（AddCell 只造 Rock），既有两参调用点零改动。</summary>
-        public void Bind(Vector3Int position, CellMagicAttr magicAttr, CellType type = CellType.Rock)
+        public void Bind(Vector3Int position, CellMagicAttr magicAttr, CellType type = CellType.Rock, Sprite sprite = null)
         {
             // 格子 (x,y) 的视觉中心在 (x+0.5, y+0.5)——与 Tilemap 渲染对齐（TASK-007 Design 发现的半格偏差，本轮修正）
             transform.position = (Vector3)position + new Vector3(0.5f, 0.5f, 0f); // z=0，深度只属于景观（铁律 #11）
 
-            var sprite = type == CellType.Bedrock
+            // 数据贴图优先（2026-10-17 拍板：一个 prefab + 每 tile 数据驱动贴图）；null = 按属性槽位回退
+            if (sprite != null)
+            {
+                _renderer.sprite = sprite;
+                return;
+            }
+
+            var slot = type == CellType.Bedrock
                 ? _bedrockSprite // 基岩按类型选图（TASK-016），不落颜色分支
                 : magicAttr switch
                 {
@@ -47,7 +54,7 @@ namespace TapCom.Presentation
                     CellMagicAttr.Yellow => _yellowSprite,
                     _ => _rockSprite,
                 };
-            if (sprite == null)
+            if (slot == null)
             {
                 if (!_missingWarned)
                 {
@@ -56,7 +63,7 @@ namespace TapCom.Presentation
                 }
                 return;
             }
-            _renderer.sprite = sprite;
+            _renderer.sprite = slot;
         }
     }
 }
