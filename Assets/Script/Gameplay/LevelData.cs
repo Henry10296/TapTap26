@@ -14,6 +14,9 @@ namespace TapCom.Gameplay
         public CellGravityAttr Gravity;
         public CellMagicAttr Magic;
 
+        /// <summary>本格贴图（2026-10-17 拍板：一个 prefab + 每 tile 数据驱动贴图）；null = 走 prefab 属性槽位回退。</summary>
+        public Sprite Sprite;
+
         /// <summary>初始锁定态；世界默认冻结，恒 true（铁律 #9），字段保留给编辑器显式覆盖。</summary>
         public bool Locked;
     }

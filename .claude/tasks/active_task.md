@@ -990,3 +990,26 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 - 2026-10-17｜遗留：若用户已在场景挂载 SpellRangeIndicator，Unity 里组件会变 Missing Script，需人工移除该组件（场景 Game.unity/SampleScene.unity 常驻节点）
 - 2026-10-17｜用户澄清（"？？？我的要求是产生范围"）：上轮拆错对象——范围圈要保留，要改的是蓄能纯白覆盖图。执行：① SpellRangeIndicator.cs 原样恢复（.meta 新 GUID：若场景已挂过旧组件会显示 Missing Script，需人工移除后重挂；未挂过则按原步骤挂）；② CircuitView.cs 两处改：+[Header 蓄能高亮] _chargeHighlight 字段（Color，默认 (1,1,1,0.35)）+ SyncCharges 每帧刷 view color（GetComponent<SpriteRenderer>）——alpha 即高亮强度，0.35=提亮，1=旧纯白覆盖，运行中 Inspector 可调即时生效｜已核验（git diff 两处 hunk 落盘）
 - 2026-10-17｜证据补充：蓄能白图=SyncCharges 每帧对 PendingCasts 组的格子盖 0.94 白块（CircuitView.cs:161-175），即用户所说"触发产生的图片"；飞行种子图/运动格清理逻辑完备无残留｜已核验（全文读过）
+- 2026-10-17｜用户再拍板："高亮不是覆盖一个图片，而是本身在闪烁" → 覆盖图方案整体拆除，改本体闪烁｜已核验（git diff 落盘）：
+  ① CircuitView.cs：删 _chargeViews 字典/ChargeSortingOrder/_chargeHighlight 与覆盖逻辑；SyncCharges 重写为闪烁对账（本帧 PendingCasts 集合 _flashSet；新进找本体开闪、退出复位 Color.white；白⇄_flashColor 正弦脉动，周期 _flashPeriod=0.4s 可调）；OnLevelLoaded 加闪烁复位+_flashing.Clear()；新增 RendererAt(pos)（动态格查 _cellViews、初始格查 binder.TryGet）；
+  ② LevelActorBinder.cs：+public TryGet(pos, out actor) 只读查询（镜像 TryTake 不删条目）。
+  依据：CellActor.Bind 只写 sprite 从不写 color ⇒ Color.white 即原始态，复位安全；_chargeViews/ChargeSortingOrder/_chargeHighlight 全库无残留引用（grep 空）。
+  未验证：未编译（Unity 侧确认）；初始格闪烁依赖 binder 实例在 CircuitView Start 时已被 FindFirstObjectByType 找到（既有逻辑，未变）｜inference
+- 2026-10-17｜修 bug「CG 点击的时候不能投掷」（用户报）｜根因已锤（读码全链路）：
+  PlayerThrower 无状态门控——玩家在 LevelLoaded 即生成（早于 Cg 态）、左键按下即投；跳过 CG 的点击同帧被投掷器吃掉带出一颗种子（CgController 与 PlayerThrower Update 顺序不定，两序皆中）；乱点种子落地可能挡出手口 → 后续全部"muzzle occluded"拒投 = 「不能投掷」的表现链。
+  修法（PlayerThrower.cs 单文件）：① 非 Playing 态不处理投掷输入（_game.Current 门控，懒缓存 GameManager）；② 切回 Playing 首帧（frameCount == _lastNonPlayingFrame+1）再吞一次点击——覆盖 Update 顺序两种情况，CG 跳过/暂停恢复/结算按钮的点击穿透一并堵死。
+  已核验（python patch 断言唯一锚点 + grep 落盘行 49/68/70/73）；未编译（Unity 侧确认）。
+  验收：重开一关（顺带清旧坏方块）→ CG 点击跳过后首帧点击不带种子、第二下起正常投；之前被挡的场先 Reload 清石。
+- 2026-10-17｜**手册「Tab 打开」落码（用户「魔法手册要显示」+「Tab打开」）**：Hud.prefab 现状复核实证配置已对——HandbookPanel 宿主=Hud 根节点（m_GameObject 399887873715501642=Hud，m_IsActive:1，非面板自身无自杀）、_panel→HandBookPanel 子节点接线正确（fileID 7476476422940816811：全屏拉伸锚点+内置 Background 白底图 a=0.392+1 子内容节点）——**打不开真根因=全 prefab 0 个 Button 组件、0 处 onClick、0 键盘监听，Toggle() 无人调**（此前「挂在图标上引用指自身」的旧诊断已被用户 20:41 改动作废）。修复=HandbookPanel.cs 三处：+using UnityEngine.InputSystem、+Update() 轮询 `Keyboard.current.tabKey.wasPressedThisFrame`→Toggle()（仿 ResetButton R 键同款模式，属性不加括号防 CS1955 复发）、类头注释补 Tab 行｜已核验（python 锚点断言 patch + grep 落盘行 2/9/25/28；**未编译**，Unity 侧确认）。Tab 键全库零占用（Script+inputactions grep 空）。已知边界：①HandBookPanel Image RaycastTarget=1，打开时全屏挡 UI 点击，Tab 再按关闭；②面板内容=内置白底半透明 sprite（Arts 无专属手册图，仅图标两张），手册内容装饰归人工；③原 Button 接线步骤降级为可选（Tab 已覆盖入口）
+
+## 2026-10-17 轮 7：tile 贴图数据驱动（"一个 prefab + 读每个 tile 自己的数据"拍板落地）
+**需求**：用户拍板「我要的就是一个prefab，读不同的tile的数据」——Square.prefab/CellActor 保持唯一，每格贴图来自该格数据，不再由 prefab 五个属性槽位决定。
+**改动（4 文件，全部已 grep 落点自证）**：
+1. `LevelData.cs:17-18` CellDef 新增 `public Sprite Sprite;`（null = 槽位回退；旧资产无此字段反序列化为 null，天然兼容）。
+2. `Assets/Editor/TilemapLevelWindow.cs:140` 导出 CellDef 时写 `Sprite = cellTile.sprite`（CellTile : Tile 基类自带 sprite 字段，美术笔刷 Inspector 已自由配，CellTile.cs 头注释即此意）。
+3. `CellActor.cs:32,36-50` Bind 增第四参 `Sprite sprite = null`：非 null 直接 `_renderer.sprite = sprite` 提前返回；null 走原属性槽位逻辑（局部变量改名 `slot` 避 CS0128 与参数同名）。既有两参调用点（CircuitView×2、Binder Changed 重绑）零改动。
+4. `LevelActorBinder.cs:18,41-44,48` OnLevelLoaded 从 `e.Data.Cells` 建 `_spriteByPos`（LevelLoadedEvent.Data 字段在 LevelManager.cs:12，已核验），Bind 透传。
+**已核验（读码）**：CellTile : Tile 继承 sprite 字段（CellTile.cs）；WorldGrid.AddCell 返回 Cell（本轮未动 Cell/WorldGrid/LevelLoader——mover 解锁由 TryTake 带走同一 GameObject，贴图自然跟随，无需在 Cell 挂数据）；TestWorldBuilder.cs:68 也写 CellDef 但不写 Sprite → 回退槽位，兼容。
+**inference（未编译，Unity 侧待确认）**：① 4 文件可编译（CS0128 同名隐患已自纠，其余未跑编译）② 重新导出后每格显示笔刷 Sprite。
+**open-questions**：① 原位变化格（引力三块转岩石等）Changed 重绑不传 sprite → 数据贴图被槽位贴图覆盖；若要求变化后保留原贴图需把 Sprite 挂进 Cell 或事件带图，未动（超本次拍板范围）。② SampleScene.unity 仍无 Square.prefab 引用（前轮发现，未动）。
+**用户手工步骤**：① 每个 CellTile 笔刷资产 Inspector 确认 Sprite 已配（不配=回退槽位）② 打开关卡编辑器窗口对现有关卡**重新导出**（旧 LevelData 资产无 Sprite 字段，不导也不炸，只是走槽位）。prefab 零改动、零拖拽。

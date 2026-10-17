@@ -137,6 +137,7 @@ namespace TapCom.EditorTools
                         Gravity = cellTile.gravity,
                         Magic = cellTile.magic,
                         Locked = true, // 世界默认冻结（铁律 #9）
+                        Sprite = cellTile.sprite, // 本格贴图（2026-10-17：笔刷 Sprite 直传；null 时运行时回退属性槽位）
                     });
                     Enclose(pos);
                 }
