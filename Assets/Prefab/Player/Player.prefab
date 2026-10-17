@@ -232,7 +232,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   _groundCheckSize: {x: 0.9, y: 0.08}
-  _fallDeathSpeed: 18
+  _fallDeathSpeed: 14
 --- !u!95 &1091768338831821633
 Animator:
   serializedVersion: 7
