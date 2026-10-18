@@ -72,9 +72,9 @@ namespace TapCom.Presentation
                     break;
 
                 case CellChangeType.Changed:
-                    // 原位属性变化（引力三块转岩石/静止固定）：重绑换贴图
+                    // 原位属性变化（引力三块转岩石/静止转基岩）：重绑换贴图（格类型随事件到达，2026-10-18）
                     if (_actorByPos.TryGetValue(e.Position, out var changed) && changed != null)
-                        changed.Bind(e.Position, e.Attr);
+                        changed.Bind(e.Position, e.Attr, e.CellType);
                     break;
             }
         }

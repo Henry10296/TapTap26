@@ -90,6 +90,9 @@ namespace TapCom.Core
         public CellMagicAttr Attr;
 
         public int MoverId;
+
+        /// <summary>当前格类型（2026-10-18：静止配方圈内格原地转基岩，类型变化随事件到达；表现层按类型重绑贴图。默认 Rock）。</summary>
+        public CellType CellType;
     }
 
     /// <summary>失重场查询（模拟器实现；PlayerMotor 只依赖 Core，不反向依赖 MagicCircuit——依赖倒置）。</summary>

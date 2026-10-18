@@ -8,7 +8,7 @@ namespace TapCom.Presentation
     /// <summary>
     /// 结算面板（TASK-016 A 线；2026-10-17 用户拍板扩展为胜负共用，挂 GameState.prefab 根）：
     /// 胜利：订 VictoryTriggeredEvent → TrySetState(Victory) → 切 _victorySprite（不拖=保留 Inspector 当前图）→ 显示；「下一关」→ Advance()。
-    /// 失败：订 FailTriggeredEvent（挤压/摔落/超时）→ TrySetState(Defeat) → 切 _defeatSprite → 显示；「重开」→ Reload()。
+    /// 失败：订 FailTriggeredEvent（挤压/摔落/超时）→ TrySetState(Defeat) → 切 _defeatSprite → 显示；「重开」→ Reload()；失败态隐藏「下一关」（2026-10-18 拍板）。
     /// 对应场景搭建「image（在LevelClear和gameover两张图切换）」：一张 Image 按 _victorySprite/_defeatSprite 切换。
     /// 离开 Victory/Defeat 态即隐藏。订阅/按钮接线挂 Awake/OnDestroy（本类 SetActive 自己所在物体，
     /// 挂面板本体的自包含挂法，2026-10-16 拍板），OnDisable 解绑会让隐藏后的面板永远收不到事件。
@@ -55,6 +55,7 @@ namespace TapCom.Presentation
             if (Services.Container.Get<GameManager>().TrySetState(GameState.Victory))
             {
                 ApplySprite(_victorySprite);
+                SetNextButtonVisible(true);
                 Show(true);
             }
         }
@@ -64,6 +65,7 @@ namespace TapCom.Presentation
             // 失败（挤压/摔落/超时同事件）→ Defeat 态 → 切 gameover 图；迁移被拒则不弹面板
             if (!Services.Container.Get<GameManager>().TrySetState(GameState.Defeat)) return;
             ApplySprite(_defeatSprite);
+            SetNextButtonVisible(false);
             Show(true);
         }
 
@@ -76,6 +78,12 @@ namespace TapCom.Presentation
         private void ApplySprite(Sprite sprite)
         {
             if (sprite != null && _resultImage != null) _resultImage.sprite = sprite;
+        }
+
+        /// <summary>失败态隐藏「下一关」按钮（2026-10-18 拍板：gameover 只留重开）；胜利态恢复显示。</summary>
+        private void SetNextButtonVisible(bool on)
+        {
+            if (_nextLevelButton != null) _nextLevelButton.gameObject.SetActive(on);
         }
 
         private void Show(bool on)

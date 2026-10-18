@@ -102,6 +102,19 @@ namespace TapCom.MagicCircuit
             _worlds = worlds;
             _levels = levels;
             _bus.Subscribe<SeedThrownEvent>(OnSeedThrown);
+            _bus.Subscribe<LevelLoadedEvent>(OnLevelLoaded);
+        }
+
+        /// <summary>关卡装载即清全部上一局模拟状态（2026-10-18 拍板）：_fired 位置键跨关残留会烧掉重开关卡后的
+        /// 同位置配方（「颜色方块不稳定触发」根因）；种子/运动格/魔法场/蓄能同属按关生命周期，一并清。</summary>
+        private void OnLevelLoaded(LevelLoadedEvent e)
+        {
+            _seeds.Clear();
+            _movers.Clear();
+            _fields.Clear();
+            _pending.Clear();
+            _fired.Clear();
+            Debug.Log("[MagicCircuit] level loaded：上一局模拟状态全清（飞行种子/运动格/魔法场/蓄能/已触发登记）");
         }
 
         /// <summary>失重场查询（IZeroFieldQuery；PlayerMotor 漂移判定用）。</summary>
@@ -422,8 +435,9 @@ namespace TapCom.MagicCircuit
             }
             else if (spell == SpellType.Static)
             {
-                // GDD 静止配方：变化直径内格子「始终固定」（永久免疫解锁），三块不销毁不转色
-                // 已固化/基岩（TASK-016）跳过：固化幂等，不发 Changed——发事件会让表现层按 None 色重绑，基岩被换成岩石贴图（副作用）
+                // 静止配方（2026-10-18 拍板改版）：变化直径内全部格子原地转为基岩（含触发三块）。
+                // 地形语义全走既有 Bedrock 闸：免疫解锁/消除/吸引（IsImmovable），无色不再参与配方（EvaluateRecipes 排除）。
+                // 已固化/基岩跳过：幂等；构造外转基岩须手动补 Frozen（Cell 构造只在 new 时置位）。
                 _snapshotBuffer.Clear();
                 foreach (var cell in world.Cells)
                 {
@@ -433,10 +447,12 @@ namespace TapCom.MagicCircuit
                 }
                 foreach (var cell in _snapshotBuffer)
                 {
+                    cell.Type = CellType.Bedrock;
+                    cell.MagicAttr = CellMagicAttr.None;
                     cell.Frozen = true;
-                    PublishChanged(CellChangeType.Changed, cell.Position, cell.MagicAttr);
+                    PublishChanged(CellChangeType.Changed, cell.Position, cell.MagicAttr, cellType: cell.Type);
                 }
-                Debug.Log($"[MagicCircuit] cast static：固定 {_snapshotBuffer.Count} 格（r={MagicParams.StaticRadius}格）");
+                Debug.Log($"[MagicCircuit] cast static：{_snapshotBuffer.Count} 格转为基岩（r={MagicParams.StaticRadius}格）");
             }
         }
 
@@ -596,9 +612,9 @@ namespace TapCom.MagicCircuit
             _ => CellMagicAttr.None,
         };
 
-        private void PublishChanged(CellChangeType type, Vector3Int pos, CellMagicAttr attr, int moverId = 0)
+        private void PublishChanged(CellChangeType type, Vector3Int pos, CellMagicAttr attr, int moverId = 0, CellType cellType = CellType.Rock)
         {
-            _bus.Publish(new CellWorldChangedEvent { Type = type, Position = pos, Attr = attr, MoverId = moverId });
+            _bus.Publish(new CellWorldChangedEvent { Type = type, Position = pos, Attr = attr, MoverId = moverId, CellType = cellType });
         }
     }
 }
