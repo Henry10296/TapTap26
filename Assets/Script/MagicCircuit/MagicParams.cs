@@ -33,7 +33,7 @@ namespace TapCom.MagicCircuit
         public const float BlastRadius = 3.5f;
 
         /// <summary>引力：直径 9 → 半径 4.5（原 3.5）。</summary>
-        public const float AttractRadius = 6f;
+        public const float AttractRadius = 4.8f;
 
         /// <summary>静止：变化直径 5 → 半径 2.5（GDD 新配方）。</summary>
         public const float StaticRadius = 2.5f;
