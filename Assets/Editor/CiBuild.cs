@@ -14,10 +14,36 @@ namespace TapCom.EditorTools
     ///     -executeMethod TapCom.EditorTools.CiBuild.BuildWindows64 -logFile <日志>
     /// 链路：导表(CSV→JSON，失败即中断) → Addressables 内容构建 → BuildPlayer。
     /// 成功 Exit(0)，任何一步失败 Exit(1)，触发层按退出码判成败。
+    /// 产物：Build/StandaloneWindows64/<时间戳>/；时间戳优先取 -buildTimestamp 启动参数，缺省用本机当前时间。
     /// </summary>
     public static class CiBuild
     {
-        private const string OutputDir = "Build/StandaloneWindows64";
+        private const string OutputRoot = "Build/StandaloneWindows64";
+
+        private static string _buildTimestamp;
+
+        /// <summary>构建时间戳：workflow 经 -buildTimestamp 传入（与 artifact 名同源），本地直跑取当前时间。</summary>
+        private static string BuildTimestamp
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(_buildTimestamp))
+                {
+                    return _buildTimestamp;
+                }
+                var args = Environment.GetCommandLineArgs();
+                for (var i = 0; i < args.Length - 1; i++)
+                {
+                    if (string.Equals(args[i], "-buildTimestamp", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _buildTimestamp = args[i + 1];
+                        return _buildTimestamp;
+                    }
+                }
+                _buildTimestamp = DateTime.Now.ToString("yyyyMMdd-HHmm");
+                return _buildTimestamp;
+            }
+        }
 
         public static void BuildWindows64()
         {
@@ -31,11 +57,13 @@ namespace TapCom.EditorTools
                         "请用 -buildTarget StandaloneWindows64 启动参数（脚本内不切平台，避免 batchmode 中途域重载）");
                 }
 
+                Debug.Log($"[CiBuild] build timestamp: {BuildTimestamp}");
+
                 StepExportTables();
                 StepBuildAddressables();
                 StepBuildPlayer();
 
-                Debug.Log($"[CiBuild] SUCCESS 全链路完成，总耗时 {watch.Elapsed.TotalSeconds:F0}s");
+                Debug.Log($"[CiBuild] SUCCESS 全链路完成（{BuildTimestamp}），总耗时 {watch.Elapsed.TotalSeconds:F0}s");
                 EditorApplication.Exit(0);
             }
             catch (Exception e)
@@ -77,16 +105,16 @@ namespace TapCom.EditorTools
                 throw new Exception("[CiBuild] Build Settings 没有启用的场景");
             }
 
-            var outputDir = Path.Combine(Path.GetDirectoryName(Application.dataPath), OutputDir);
-            if (Directory.Exists(outputDir))
+            var rootDir = Path.Combine(Path.GetDirectoryName(Application.dataPath), OutputRoot);
+            if (Directory.Exists(rootDir))
             {
-                Directory.Delete(outputDir, true);
+                Directory.Delete(rootDir, true); // 整根清理：磁盘有界；历史版本靠 Actions artifact（14 天）
             }
 
             var options = new BuildPlayerOptions
             {
                 scenes = scenes,
-                locationPathName = Path.Combine(OutputDir, $"{PlayerSettings.productName}.exe"),
+                locationPathName = Path.Combine(OutputRoot, BuildTimestamp, $"{PlayerSettings.productName}.exe"),
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None,
             };

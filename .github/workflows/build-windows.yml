@@ -8,7 +8,8 @@
 #   2. 出包期间不要开着本项目的 Unity 编辑器（同项目只能有一个 Unity 实例）。
 #
 # 触发：push 到 Dev_Pao，或 Actions 页手动 Run workflow。
-# 产物：Build/StandaloneWindows64/ 上传为 Actions artifact，本机 runner 工作目录下也留有原件。
+# 产物：Build/StandaloneWindows64/<时间戳>/ 上传为 Actions artifact（artifact 名带同一时间戳），
+#       本机 runner 工作目录下也留有原件；Build 根目录每轮清空，历史版本只看 artifact（保留 14 天）。
 #
 # 注意：checkout 设 clean:false 保留 Library 缓存，首次构建最慢，之后为增量。
 # Unity 版本升级（ProjectVersion.txt 变更）时，改下方 UNITY_EXE 路径里的版本号。
@@ -35,6 +36,7 @@ jobs:
           clean: false # 保留 Library/ 增量构建缓存；勿改回 true，否则每轮全量重建
 
       - name: Build (Unity batchmode)
+        id: build
         shell: powershell
         env:
           UNITY_EXE: 'C:\Program Files\Unity\Hub\Editor\6000.0.53f1\Editor\Unity.exe'
@@ -43,11 +45,14 @@ jobs:
           $logDir = Join-Path $project 'Logs'
           New-Item -ItemType Directory -Force -Path $logDir | Out-Null
           $log = Join-Path $logDir 'ci-build.log'
+          $ts = Get-Date -Format 'yyyyMMdd-HHmm'
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "timestamp=$ts" -Encoding ASCII
           $unityArgs = @(
             '-batchmode', '-nographics',
             "-projectPath", "`"$project`"",
             '-buildTarget', 'StandaloneWindows64',
             '-executeMethod', 'TapCom.EditorTools.CiBuild.BuildWindows64',
+            '-buildTimestamp', $ts,
             "-logFile", "`"$log`""
           )
           # PowerShell 不等 GUI 程序：必须 Start-Process -Wait 才能拿到真实退出码
@@ -72,6 +77,6 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: TapTap26-Win64-${{ github.run_number }}
+          name: TapTap26-Win64-${{ steps.build.outputs.timestamp }}
           path: Build/StandaloneWindows64/
           retention-days: 14
