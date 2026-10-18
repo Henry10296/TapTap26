@@ -1013,3 +1013,56 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 **inference（未编译，Unity 侧待确认）**：① 4 文件可编译（CS0128 同名隐患已自纠，其余未跑编译）② 重新导出后每格显示笔刷 Sprite。
 **open-questions**：① 原位变化格（引力三块转岩石等）Changed 重绑不传 sprite → 数据贴图被槽位贴图覆盖；若要求变化后保留原贴图需把 Sprite 挂进 Cell 或事件带图，未动（超本次拍板范围）。② SampleScene.unity 仍无 Square.prefab 引用（前轮发现，未动）。
 **用户手工步骤**：① 每个 CellTile 笔刷资产 Inspector 确认 Sprite 已配（不配=回退槽位）② 打开关卡编辑器窗口对现有关卡**重新导出**（旧 LevelData 资产无 Sprite 字段，不导也不炸，只是走槽位）。prefab 零改动、零拖拽。
+
+---
+
+## 2026-10-18 研究快照：2 bug（颜色方块不稳定触发 / levelclear-gameover 未区分）+ 静止魔法改 bedrock
+
+**Status: RESEARCH（纯读码，未写任何游戏代码；3 个决策点已出 Ask 卡片）**
+
+### Bug 1：leveldata 颜色方块不稳定触发 — 根因锤死（读码全链）
+
+- **根因 = MagicCircuitSimulator._fired（位置键 HashSet）跨关卡不清 + 模拟器全局单例活过所有重开路径**：
+  - `_fired` 全库仅 声明(:81) / Contains(:356) / Add(:362) 三处，**无 Clear、构造只订 SeedThrownEvent(:104) 不订 LevelLoadedEvent**
+  - 模拟器 CoreDriver.Awake 建一次（CoreBootstrap.cs:57-60），Core 物体 DontDestroyOnLoad（CoreBootstrap.cs:23）
+  - 全部重开路径都不重建模拟器：PausePanel 只有 继续/回标题 两按钮（无重开）；R 键/ResetButton → LevelManager.Reload（LevelManager.cs:71-75，Playing→Loading）；ESC 回标题 → TitleScreen→Loading——殊途同归，模拟器与 `_fired` 存活
+  - 症状逐条对上：首次成功三连即烧录 key（:362 在蓄能开始时 Add，蓄能中途取消也不回滚）→ ESC 重开同位置三连被 :356 跳过 =「连红2不再有反应」；黄落点不同 key 不同 + 多候选 `_random.Next` 随机选一（:361）=「红1有几率有反应」；重开 Play 全新模拟器 =「只能重新运行游戏」
+  - **附带同类泄漏（同一次修复覆盖）**：`_seeds/_movers/_fields/_pending` 也跨关卡存活——飞行种子/运动格可落进新关字典、吸引场可捕获新关格、旧蓄能可在新关自动施法
+  - 首次尝试「黄连红1无反应」疑似 L 形规则正常表现（三连须两两相邻，2026-10-09 拍板模型），非 bug——待用户对照预期
+  - 对照组先例：LevelTimer._fired 在 OnLevelLoaded 复位（LevelTimer.cs:45）——同类按关复位有既定模式
+- 修法（待拍板）：MagicCircuitSimulator 订 LevelLoadedEvent → 清 `_seeds/_movers/_fields/_pending/_fired`（推荐全清）或仅清 `_fired`（最小）
+
+### Bug 2：levelclear/gameover 未区分 — 根因锤死 = prefab 引用未接（纯人工步骤，零代码）
+
+- 代码已编译完整（Assembly-CSharp.dll 10-17 21:04 > VictoryPanel.cs 17:40）：胜利切 _victorySprite（:57）/失败切 _defeatSprite（:66）；ApplySprite null 即跳过不报错（:78）
+- GameState.prefab VictoryPanel 组件块（prefab :680-684）**只序列化 _panel/_nextLevelButton**；_resultImage/_victorySprite/_defeatSprite/_resetButton 全缺（全 prefab grep 0 命中）；4 个场景 grep `_defeatSprite|_victorySprite` 全 0 → 无场景 override
+- ⇒ 失败弹的结算图永远是 Image 上现挂的 LevelClear 图 =「未区分」；_resetButton null → 失败时重开按钮也不接线
+- 修法 = 人工拖引用（资产人工配置铁律）：GameState.prefab → VictoryPanel 拖 4 引用（_resultImage=两图切换那张 Image、_victorySprite=LevelClear 图、_defeatSprite=gameover 图、_resetButton=ReSetButton 的 Button 组件，无 Button 先补加）。prefab 实例无 override，改 prefab 份即两场景全局生效
+- 遗留设计问（不阻塞）：失败态「下一关」按钮仍可点（Defeat→Loading 边存在，GameManager.cs:51）→ 要否隐藏/禁用，Ask 卡片
+
+### 修改需求：静止魔法 = 变化直径内全改 bedrock（证据三段，待拍板落码）
+
+**① 改什么（4 文件）**
+- GameEvents.cs:84 CellWorldChangedEvent + `public CellType CellType;` 字段（TASK-020 已登记的「真切类型」缺口）
+- MagicCircuitSimulator.cs:423-440 Static 分支：IsImmovable 过滤后圈内格 `Type=Bedrock; Frozen=true; MagicAttr=None`；PublishChanged(:599) 加可选参 cellType=Rock（唯一发布点 :601）
+- CircuitView.cs:112 Changed 重绑传 e.CellType；LevelActorBinder.cs:77 同（初始格/动态格两处都要）
+
+**② 强证据**
+- Cell.Type 公开字段可原地改（Cell.cs:59）；CellActor.Bind 已支持按 type 选 _bedrockSprite（CellActor.cs:48），Square.prefab _bedrockSprite 已接线（guid 22c2a6be848befc40975e0b9509e030b）
+- Bedrock 全闸现成：Unlock 拒(:454)/RemoveDictCell 拒(:478)/EvaluateRecipes 排除(:332)/构造即 Frozen 语义（Cell.cs:89）；配方枚举排除 = 转化格不再参与三连
+- StepPendingCasts 有效性查 MagicAttr!=None（:279）→ 圈内格被转，挂中的其他蓄能自动取消，无脏态
+- CellWorldChangedEvent 全库单发布点（:601）、订阅方 3 个（Binder/CircuitView/CrushDetector），加字段用命名初始化器，源兼容
+
+**③ 未验证/推断**
+- 未编译（Unity 侧确认）
+- 「变化直径」= MagicParams.StaticRadius（GDD 直径5→半径2.5，MagicParams.cs:39），语义同现有静止范围，不改参数
+- 触发三块（2蓝1黄）自身在圈内 → 按「都」字一并转 bedrock（默认理解，Ask 卡片确认）
+- 转化后表现副作用： Changed→重绑走 type 分支选基岩图，数据贴图（round-7 tile Sprite）被槽位图替换——基岩槽位图即期望图，无回归
+
+- 2026-10-18｜三拍板落码（AskUserQuestion：清全部五份状态 / 圈内全转基岩含触发三块 / 失败态隐藏下一关）｜已核验（python 锚点断言补丁 5 文件 10 hunk 全 OK + grep 落盘行号；EOL 按文件自适应，GameEvents/Simulator=CRLF 原样保持，余 LF；试错：首两次 heredoc 补丁因 CRLF 锚点 0 命中被断言挡下零写入，临时脚本已删）
+  ① bug1：MagicCircuitSimulator 构造 +订 LevelLoadedEvent（:105）；+OnLevelLoaded(:110) 清 _seeds/_movers/_fields/_pending/_fired + 日志自证一行
+  ② 静止魔法转基岩：GameEvents.cs:95 CellWorldChangedEvent +CellType 字段（TASK-020 缺口销案）；Simulator Static 分支（:450-453）改 Type=Bedrock+Attr=None+Frozen=true+PublishChanged 带 cellType；PublishChanged(:460) 加 cellType=Rock 可选参（全库唯一发布点）；CircuitView.cs:112 / LevelActorBinder.cs:77 Changed 重绑传 e.CellType（初始格/动态格两路都换基岩图，Square.prefab _bedrockSprite 已接线）
+  ③ VictoryPanel +SetNextButtonVisible(:84)：OnVictory 显示(:58)/OnFail 隐藏(:68)；类头注释同步
+- 未编译/未 runtime（Unity 侧确认）｜inference：① 5 文件可编译（CellType 字段与类型同名合法，C# Color Color 先例）② 转基岩格 Expected：免疫解锁/消除/吸引/虚空，不参与三连，挂中蓄能自动取消（StepPendingCasts 查 MagicAttr）
+- 用户人工步骤（bug2 修图不切换，本轮零代码）：GameState.prefab → VictoryPanel 拖 4 引用：_resultImage=两图切换 Image / _victorySprite=LevelClear 图 / _defeatSprite=gameover 图 / _resetButton=ReSetButton 的 Button（无 Button 先 Add）；改 prefab 份两场景生效
+- 验收清单：①编译无报错 ②进关投黄组红红黄触发 → ESC 回标题重进 → 同位再组 → 应再触发 + Console 见「[MagicCircuit] level loaded：上一局模拟状态全清」③2蓝1黄触发 → 圈内方块全变基岩贴图、种子可贴面落格、引力/爆炸/虚空对它无效、不再参与配方 ④红红黄引力回归：三块转无色岩石保留（旧行为）⑤接完 4 引用后：胜利显 LevelClear、失败显 gameover、失败无「下一关」按钮、重开可用

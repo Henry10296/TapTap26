@@ -350,7 +350,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &8189475773142091132
 RectTransform:
   m_ObjectHideFlags: 0
@@ -681,4 +681,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _panel: {fileID: 9146143639581329170}
+  _resultImage: {fileID: 0}
+  _victorySprite: {fileID: 0}
+  _defeatSprite: {fileID: 0}
   _nextLevelButton: {fileID: 4728126692756945862}
+  _resetButton: {fileID: 5339966396680454114}

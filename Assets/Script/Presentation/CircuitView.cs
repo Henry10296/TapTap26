@@ -108,8 +108,8 @@ namespace TapCom.Presentation
                     break;
 
                 case CellChangeType.Changed:
-                    // 原位属性变化（引力转岩石/静止固定）：重新 Bind 换贴图
-                    if (_cellViews.TryGetValue(e.Position, out var changed)) changed.Bind(e.Position, e.Attr);
+                    // 原位属性变化（引力转岩石/静止转基岩）：重新 Bind 换贴图（格类型随事件到达，2026-10-18）
+                    if (_cellViews.TryGetValue(e.Position, out var changed)) changed.Bind(e.Position, e.Attr, e.CellType);
                     break;
             }
         }
