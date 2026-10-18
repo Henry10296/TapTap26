@@ -43,15 +43,29 @@ jobs:
           $logDir = Join-Path $project 'Logs'
           New-Item -ItemType Directory -Force -Path $logDir | Out-Null
           $log = Join-Path $logDir 'ci-build.log'
-          & $env:UNITY_EXE `
-            -batchmode -nographics `
-            -projectPath $project `
-            -buildTarget StandaloneWindows64 `
-            -executeMethod TapCom.EditorTools.CiBuild.BuildWindows64 `
-            -logFile $log
-          $code = $LASTEXITCODE
+          $unityArgs = @(
+            '-batchmode', '-nographics',
+            "-projectPath", "`"$project`"",
+            '-buildTarget', 'StandaloneWindows64',
+            '-executeMethod', 'TapCom.EditorTools.CiBuild.BuildWindows64',
+            "-logFile", "`"$log`""
+          )
+          # PowerShell 不等 GUI 程序：必须 Start-Process -Wait 才能拿到真实退出码
+          $p = Start-Process -FilePath $env:UNITY_EXE -ArgumentList $unityArgs -Wait -PassThru
+          $code = $p.ExitCode
           Write-Host "Unity exit code: $code"
-          Get-Content $log -Tail 60
+          if (-not (Test-Path $log)) {
+            Write-Host "ERROR: Unity 没有写日志文件（进程未真正运行）"
+            exit 1
+          }
+          Get-Content $log -Tail 80
+          if ($code -eq 0) {
+            # 退出码再对一次日志标记，防止假绿
+            if (-not (Select-String -Path $log -Pattern '\[CiBuild\] SUCCESS' -Quiet)) {
+              Write-Host "ERROR: 退出码 0 但日志无 [CiBuild] SUCCESS"
+              exit 1
+            }
+          }
           exit $code
 
       - name: Upload build

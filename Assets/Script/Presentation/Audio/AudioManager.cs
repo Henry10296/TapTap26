@@ -32,6 +32,7 @@ namespace TapCom.Presentation
         {
             GameState.Playing => MusicPlay,
             GameState.TitleScreen => MusicStop,
+            GameState.Loading => MusicStop, // reset/换关全过 Loading（LevelManager.Reload/Advance），停旧曲让 Playing 从头播（2026-10-18 用户需求：BGM 跟着重开）
             _ => null,
         };
     }

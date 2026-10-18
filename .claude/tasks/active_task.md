@@ -1076,7 +1076,7 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 
 ## Task ID: TASK-019-CICD自动出包（Windows）
 
-**Status: CODING（两文件已落盘；本机验证被项目单实例锁拦——用户 Unity 编辑器开着，关闭后重跑）**
+**Status: CODING（runner 已注册并首跑；workflow「PowerShell 不等 GUI」缺陷已修，待 push 后重跑）**
 
 ## 目标
 
@@ -1093,6 +1093,7 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 - 落盘 2 文件：`Assets/Editor/CiBuild.cs`（导表→Addressables→BuildPlayer 三步链，平台守卫+Exit(0)/Exit(1)，namespace TapCom.EditorTools 对齐 QuickPlay 风格）、`.github/workflows/build-windows.yml`（push Dev_Pao + 手动；runs-on [self-hosted, windows]；checkout clean:false 保 Library 增量；batchmode 步骤 + artifact 上传 TapTap26-Win64-<run_number>，14 天保留；零 secret）｜已核验（Write 成功）
 - 本机验证 #1：batchmode 启动即被项目单实例锁拦，Unity exit 21「It looks like another Unity instance is running with this project open」——**脚本未执行到（CiBuild 未过编译验证）**，非 CiBuild 自身失败；物理卡点 = 用户 Unity 编辑器开着本项目，关闭后重跑同一条命令即可｜已核验（task output UNITY_EXIT_CODE=21 + log 原文）
 - 2026-10-18｜编译错误 CS0104 ×7（用户贴错，佐证 = 用户编辑器已导入编译 CiBuild.cs）：根因 = 同时 using System.Diagnostics（为 Stopwatch）与 UnityEngine → `Debug` 二义；修复 = 删 `using System.Diagnostics;` + 唯一一处改全限定 System.Diagnostics.Stopwatch｜已核验（Edit 成功）；重编译零错待用户 Unity 侧确认｜inference
+- 2026-10-18｜runner 首跑（run 39121615144，C:\actions-runner 注册成功、checkout 正常）：构建步「Unity exit code: 0」+ 日志文件不存在 → 真相 = **PowerShell 不等 GUI 进程**，`&` 立即返回，$LASTEXITCODE 恒 0 假绿，Unity 刚启动未及写日志即被步骤回收；Get-Content 炸是因 Actions powershell 预置 ErrorActionPreference=stop｜已核验（用户贴 run 日志原文）。修复 = Start-Process -Wait -PassThru 拿真退出码 + 日志存在性 + Select-String 对 `[CiBuild] SUCCESS` 标记三重自证｜已核验（Edit 成功）。修正早前判断：runner 构建用自己 checkout（C:\actions-runner\_work\TapTap26\TapTap26），与本地编辑器的单实例锁互不影响——只有同路径 batchmode 才需关编辑器。watch-point：若重跑出 Unity licensing 报错 = runner 装成服务（SYSTEM 账号）看不到 Personal 授权，改回 run.cmd 交互跑｜inference
 
 ## Next Steps
 
@@ -1119,3 +1120,13 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
   **根因=Wwise 插件自管器与手改 meta 打架**：① EditorConfiguration 硬编码 Profile（AkPluginActivator.cs:29）→ 域重载时 ActivatePluginsForEditor(:191) 恒把 x86_64/Profile 引擎 Editor 位设 1；② 打包配置 CurrentPluginConfig 读 AkWwiseProjectData.asset（现为空→fallback "Profile"，:44-53；资产落盘实证 CurrentPluginConfig: 空）；③ 构建收尾 ActivatePluginsForDeployment(false) 把 Profile Editor 位翻回 1 → 与我上轮手改的 Release Editor=1 撞同名 → Build Failed。④ 更深坑：即便不撞名，Release 引擎在打包时也因 config("Release")!=GetCurrentConfig()("Profile") 被跳过（:162）→ 包里没引擎 DLL → 无声。**结论：手改 meta 是不稳定态，必须顺着自管器设计走**。
   设计态（自管器期望）：Editor=Profile 引擎（唯一）；打包 config 由 CurrentPluginConfig 决定（官方开关=菜单 Assets→Wwise→Activate Plugins→Release/Profile/Debug，AkPluginActivatorMenus.cs:12 写资产）；构建期自管器自己翻 Win64 位、收尾翻回 0（正常，勿再手改）。
   修复方案（待用户选执行方式）：A 菜单切 Release（写 CurrentPluginConfig）+ B Release meta Editor 位 1→0（Profile Editor=1 保留=设计态）→ 重新 Build And Run。未验证：修复后构建/包内声音/编辑器 BGM。
+- 2026-10-18｜修复落盘（AskUserQuestion 拍板=我直接改）｜已核验（python 锚点断言 count==1，改后 grep 实证）：x86_64/Release 引擎 meta Editor 位 1→0（LF 文件，锚点唯一）。终态对齐自管器设计态：Release Editor=0/Win64=0（构建期自管器自己翻 Win64，收尾翻回 0，正常勿手改）；Profile Editor=1（硬编码设计态，保留）。待用户人工：Unity 菜单 Assets→Wwise→Activate Plugins→Release（写 AkWwiseProjectData.asset CurrentPluginConfig，官方开关 AkPluginActivatorMenus.cs:12）→ 重新 Build And Run。未验证：构建成功与否/包内声音/编辑器 BGM。
+- 2026-10-18｜「绑玩法」拍板=先验证现状 7 个（AskUserQuestion）+ 新需求：reset 时 BGM 跟着重开（用户明说）｜已核验（读 LevelManager/VictoryPanel 全文 + grep reset 路径 + AudioManager 映射）：
+  reset 路径收敛：R 键（ResetButton.cs:18）/ 游戏内重开 + 结算面板重开（VictoryPanel.cs:111）/ 失败重试（DefeatPanel.cs:80）→ 全走 LevelManager.Reload()（:71-75）= TrySetState(Loading)→LoadCurrent→Load→TrySetState(Cg)（:105）→（Cg 线推）→Playing。下一关 Advance 同样过 Loading（:87）。
+  **缺口**：AudioCatalog 状态映射只有 Playing→Play_BGM / TitleScreen→Stop_BGM（AudioManager.cs:31-36）→ 重开时无人发 Stop，旧 music 持续，Cg→Playing 再叠 Play_BGM（Wwise music 对象二次 post 行为=inference：堆叠或忽略，反正不从头）。用户需求：reset→BGM 从头。
+  **修法（一行，待用户拍时机）**：AudioCatalog.For(GameStateChangedEvent) 加 `GameState.Loading => MusicStop`。全路径效果：重开/换关 Loading 停 → Playing 从头播；首进 Title→Loading Stop=空操作；ESC 回标题不受影响。
+  open-question（不改）：暂停恢复 Paused→Playing 现有映射即重发 Play_BGM，恢复时可能叠音乐——待验证时实测再定（可能与 Loading→Stop 同批处理）。
+  验证清单（用户 Unity 侧）：重启 Unity（清插件冲突残留）→ Play：①进关 [Audio] bank loaded: Main + play Play_BGM，BGM 出声 ②投种子 play Play_Seed_Throw ③四配方各一声 ④R 重开：play Stop_BGM → play Play_BGM，音乐从头 ⑤ESC 回标题 Stop_BGM。若 BGM 出声但夹 plugin missing/MatrixReverb 报错→第二断点（bank 用 Matrix Reverb，工程无 AkMatrixReverb.dll），报错原文发我再定。
+  Tier1 扩绑候选（验证后再开，AskUserQuestion 已拍先验证）：Level_Complete/Failed、Seed_Switch、Ambient_Ruin、Player_Crushed、Seed_Land、Level_Reset（需区分重开 vs 首进）。
+- 2026-10-18｜reset-BGM 落码（AskUserQuestion 拍板=现在就落）｜已核验（python 锚点断言 count==1，grep 落盘行号）：AudioManager.cs:35 AudioCatalog 加 `GameState.Loading => MusicStop`（LF 文件）。效果：R 键/重开按钮/结算重开/失败重试/下一关全过 Loading 态 → 停旧曲，Cg→Playing 从头播；首进/回标题不变。
+  待用户 Unity 侧验证（重启 Unity 清插件残留 → Play）：①进关 bank loaded: Main + play Play_BGM 出声 ②投种 Play_Seed_Throw ③四配方各一声 ④R 重开 play Stop_BGM → play Play_BGM 从头 ⑤ESC 回标题 Stop_BGM ⑥顺带听暂停→继续是否叠乐（Paused→Playing 重发问题，已记 open-question）。未验证：全部。MatrixReverb 缺 DLL 悬案仍在。
