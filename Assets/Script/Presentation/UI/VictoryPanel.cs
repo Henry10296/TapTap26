@@ -7,7 +7,7 @@ namespace TapCom.Presentation
 {
     /// <summary>
     /// 结算面板（TASK-016 A 线；2026-10-17 用户拍板扩展为胜负共用，挂 GameState.prefab 根）：
-    /// 胜利：订 VictoryTriggeredEvent → TrySetState(Victory) → 切 _victorySprite（不拖=保留 Inspector 当前图）→ 显示；「下一关」→ Advance()。
+    /// 胜利：订 VictoryTriggeredEvent → TrySetState(Victory) → 切 _victorySprite（不拖=保留 Inspector 当前图）→ 显示；「下一关」→ Advance()；隐藏「重开」（只留通关，2026-10-18 拍板）。
     /// 失败：订 FailTriggeredEvent（挤压/摔落/超时）→ TrySetState(Defeat) → 切 _defeatSprite → 显示；「重开」→ Reload()；失败态隐藏「下一关」（2026-10-18 拍板）。
     /// 对应场景搭建「image（在LevelClear和gameover两张图切换）」：一张 Image 按 _victorySprite/_defeatSprite 切换。
     /// 离开 Victory/Defeat 态即隐藏。订阅/按钮接线挂 Awake/OnDestroy（本类 SetActive 自己所在物体，
@@ -56,6 +56,7 @@ namespace TapCom.Presentation
             {
                 ApplySprite(_victorySprite);
                 SetNextButtonVisible(true);
+                SetResetButtonVisible(false); // 2026-10-18 拍板：胜利只留「通关」
                 Show(true);
             }
         }
@@ -66,6 +67,7 @@ namespace TapCom.Presentation
             if (!Services.Container.Get<GameManager>().TrySetState(GameState.Defeat)) return;
             ApplySprite(_defeatSprite);
             SetNextButtonVisible(false);
+            SetResetButtonVisible(true);
             Show(true);
         }
 
@@ -84,6 +86,12 @@ namespace TapCom.Presentation
         private void SetNextButtonVisible(bool on)
         {
             if (_nextLevelButton != null) _nextLevelButton.gameObject.SetActive(on);
+        }
+
+        /// <summary>胜利态隐藏「重开」按钮（2026-10-18 拍板：胜利只留通关）；失败态恢复显示。</summary>
+        private void SetResetButtonVisible(bool on)
+        {
+            if (_resetButton != null) _resetButton.gameObject.SetActive(on);
         }
 
         private void Show(bool on)

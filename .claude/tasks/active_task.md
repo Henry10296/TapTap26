@@ -3,7 +3,7 @@
 > 跨会话状态锚点。换会话第一动作 = 读本文件接管，不靠记忆、不靠前序对话。
 > 有 Edit/Write 的轮次，结束前必须先回写本文件（Stop hook 强制）。
 >
-> **当前任务：TASK-018-种子HUD（见文末，CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
+> **当前任务：TASK-019-CICD出包（见文末，CODING 待本机验证）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
 
 ---
 
@@ -1066,3 +1066,56 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 - 未编译/未 runtime（Unity 侧确认）｜inference：① 5 文件可编译（CellType 字段与类型同名合法，C# Color Color 先例）② 转基岩格 Expected：免疫解锁/消除/吸引/虚空，不参与三连，挂中蓄能自动取消（StepPendingCasts 查 MagicAttr）
 - 用户人工步骤（bug2 修图不切换，本轮零代码）：GameState.prefab → VictoryPanel 拖 4 引用：_resultImage=两图切换 Image / _victorySprite=LevelClear 图 / _defeatSprite=gameover 图 / _resetButton=ReSetButton 的 Button（无 Button 先 Add）；改 prefab 份两场景生效
 - 验收清单：①编译无报错 ②进关投黄组红红黄触发 → ESC 回标题重进 → 同位再组 → 应再触发 + Console 见「[MagicCircuit] level loaded：上一局模拟状态全清」③2蓝1黄触发 → 圈内方块全变基岩贴图、种子可贴面落格、引力/爆炸/虚空对它无效、不再参与配方 ④红红黄引力回归：三块转无色岩石保留（旧行为）⑤接完 4 引用后：胜利显 LevelClear、失败显 gameover、失败无「下一关」按钮、重开可用
+- 2026-10-18｜「把windows绑定一下，音乐」研究 + 对账（AskUserQuestion 拍板=Windows 插件/bank 对账，纯静态，零代码）｜已核验（读 meta/JSON/git show/grep 二进制）：
+  链路静态五环齐备（Catalog Playing→Play_BGM AudioManager.cs:33 / 后端自建发射器 AudioBackend.cs:30 / 4 场景挂 AkInitializer+AkGameObj GUID 对账 / Init.bnk+Main.bnk 在 / Main.txt 含 Play_BGM+music1/music2）。
+  **断点=插件启用表**：今天提交 7f0413f（17:55）把 x86_64/Release/AkUnitySoundEngine.dll 的 Win64 enabled 1→0（git show 实证，提交前 CPU=x86_64 正确配置）。现状：x86_64 Release 全 0；x86_64 Profile Editor=1+Win64=1；x86 Profile Editor=1（32 位 DLL 挂 64 位 Editor）+Win=1+Win64=1；x86 三引擎全 Win=1 同名 AnyCPU 竞争；x86_64 DSP×7 Editor=1；x86 DSP×7 Win=1。同名 AkUnitySoundEngine.dll 多资产同平台启用=Unity 冲突，Editor 端 32 位 x86 Profile 一旦胜出必 DllNotFound→音频死。
+  bank 侧：生成器 2024.1.2.8726 Windows；PluginInfo 仅 Matrix Reverb（DLL: AkMatrixReverb）+System/NoOutput；**Unity 侧无 AkMatrixReverb.dll 且 x86_64 Release 引擎 DLL grep "MatrixReverb" 0 命中（无静态符号）**→reverb 加载失败风险｜inference（未 runtime 证实，表现可能=plugin missing 报错/干播）。版本：集成 2024.1.17（弃用常量到 2024.1.9，backend 注释 17）vs bank 2024.1.2 同 minor 前向兼容｜inference。
+  人工清单已交付：Release(x86_64)=Editor+Win64 恢复、x86 Profile 去 Editor/Win64、x86 全家建议全关（64 位项目）、Profile/Debug 全关防同名竞争、DSP 视 bank 用量、MatrixReverb 缺 DLL handoff 音频侧（拷 SDK DLL 或 Wwise 工程去 reverb）。验收=Play 见 [Audio] bank loaded: Main + play Play_BGM。
+
+---
+
+## Task ID: TASK-019-CICD自动出包（Windows）
+
+**Status: CODING（两文件已落盘；本机验证被项目单实例锁拦——用户 Unity 编辑器开着，关闭后重跑）**
+
+## 目标
+
+用户 2026-10-18「想做 CICD，主要是自动构建自动出包」。约束与路线拍板：**资产不能上传**（Arts/Wwise bank 不入库，已记忆沉淀）→ 云端 runner 出的包必缺资产 → 最终路线 **GitHub Actions + 本机 self-hosted runner**（本机资产/已激活 Unity，包完整、零 secret 配置）。
+
+## 本轮证据链（2026-10-18）
+
+- 形态拍板三连（AskUserQuestion + 用户两次纠正/拍板）：云端 game-ci+Windows 包 → 用户纠正「资产不能上传」（撤销 Arts 入库）→ 列三路线（self-hosted runner / 本机 Jenkins / .bat+计划任务）→ 用户拍板 **GitHub self-hosted runner**｜已核验（用户答复原文）
+- `TableTool/Editor/TableExportWindow.cs:17` `ExportAllForCommandLine()` 静态无参、失败 throw（batchmode 非零退出），注释明示 CI 入口｜已核验（源码实读）
+- 全项目除 Wwise 外无 asmdef；Assets/Editor 与 TableTool/Editor 同在 Assembly-CSharp-Editor（根目录 csproj 佐证），CiBuild 可直接互调｜已核验
+- **Addressables 2.3.16 API 实测**（PackageCache/com.unity.addressables@1d7f6a740e58，哈希目录名）：`AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult)` 静态（AddressableAssetSettings.cs:2943，内部走 DefaultObject.Settings）；`AddressableAssetBuildResult.Error` 公开属性（AddressablesDataBuilders.cs:29）；`AddressableAssetSettingsDefaultObject.Settings`（:110）——首报类型名 AddressablesPlayerSettingsResult 不存在，读包源码纠正为 AddressablesPlayerBuildResult｜已核验
+- EditorBuildSettings 场景 = Start.unity + Game.unity；productName="My project (1)"（ProjectSettings.asset:16，exe 名随它）；.gitignore 已忽略 /Build/；Wwise 引擎 DLL 已入库（构建不受阻，bank 不入库故 CI 包无声）｜已核验
+- 本机 Unity 6000.0.53f1 在 Hub 默认路径；C:\ProgramData\Unity 无 ULF（新版 entitlement 授权）——self-hosted 路线不需要 ULF/secrets，正好绕开云端激活那套｜已核验
+- 落盘 2 文件：`Assets/Editor/CiBuild.cs`（导表→Addressables→BuildPlayer 三步链，平台守卫+Exit(0)/Exit(1)，namespace TapCom.EditorTools 对齐 QuickPlay 风格）、`.github/workflows/build-windows.yml`（push Dev_Pao + 手动；runs-on [self-hosted, windows]；checkout clean:false 保 Library 增量；batchmode 步骤 + artifact 上传 TapTap26-Win64-<run_number>，14 天保留；零 secret）｜已核验（Write 成功）
+- 本机验证 #1：batchmode 启动即被项目单实例锁拦，Unity exit 21「It looks like another Unity instance is running with this project open」——**脚本未执行到（CiBuild 未过编译验证）**，非 CiBuild 自身失败；物理卡点 = 用户 Unity 编辑器开着本项目，关闭后重跑同一条命令即可｜已核验（task output UNITY_EXIT_CODE=21 + log 原文）
+- 2026-10-18｜编译错误 CS0104 ×7（用户贴错，佐证 = 用户编辑器已导入编译 CiBuild.cs）：根因 = 同时 using System.Diagnostics（为 Stopwatch）与 UnityEngine → `Debug` 二义；修复 = 删 `using System.Diagnostics;` + 唯一一处改全限定 System.Diagnostics.Stopwatch｜已核验（Edit 成功）；重编译零错待用户 Unity 侧确认｜inference
+
+## Next Steps
+
+1. 用户关闭本项目 Unity 编辑器后重跑 batchmode 全链验证（编译/导表/Addressables/出包），失败按日志修复。
+2. 人工（一次性）：Settings→Actions→Runners→New self-hosted runner（Windows x64）→ 按向导下载 → config.cmd 注册 → **run.cmd 交互启动（勿装服务：Unity license 绑登录用户）**。
+3. 验收：①本机构建 SUCCESS + 双击 exe 可玩 ②push Dev_Pao 自动触发 ③Actions 页下载 artifact（或本机 Build/ 直取）。
+4. 已知边界（已告知用户）：出包时须关本项目 Unity 编辑器；CI 包无 Wwise bank（无声，维持现状不扩范围）。
+- 2026-10-18｜音频 meta 直修生效 + 打包失败新断点根因｜已核验（用户贴 Console 日志 + 读源码 + cat WwiseSettings.xml）：
+  ① meta 直修（用户「你能帮我做吗」授权）：x86_64 Release 引擎 Editor=1/Win64=1(CPU x86_64)、Profile Editor=0/Win64=0。**日志证据：same-name 冲突报错消失 + "Sound engine initialized successfully"**（引擎自证，Plugin DLL path 指向 x86_64\DSP）。
+  ② 新断点=Build And Run 失败（Build Failed, 2 errors）：AkBuildPreprocessor.cs:147 闸 `CopySoundBanksAsPreBuildStep=true`（Assets/WwiseSettings.xml:3 实证）→ CopySoundbanks(:119)→GetSoundBankPaths 找「Wwise 工程」bank 源目录；`<WwiseProjectPath />` 为空 + 全仓库 glob *.wproj 0 命中 → "Could not find source folder for <Windows>"。bank 本就直接躺在 Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/（前轮对账），拷贝步骤在本项目**恒失败**（无工程可拷）。
+  ③ 修复（人工步骤已交付）：菜单 Edit → Wwise Settings... → 取消勾选 "Copy SoundBanks at pre-Build step"（AkWwiseEditorSettings.cs:353 菜单项 / :532 toggle；写回 WwiseSettings.xml）。关拷贝后 post-build DeleteSoundbanks(:174) 仅在拷贝成功设了 destination 才删 → StreamingAssets bank 原样进包，运行时加载路径不变。
+  备选：直改 WwiseSettings.xml true→false（Unity 开着需域重载才被 Instance 缓存重新读，菜单走缓存写通道即时生效，故推荐菜单）。
+  未验证：编辑器/包内 BGM 验收（[Audio] bank loaded: Main + play Play_BGM）仍未确认；重打包结果待用户操作。
+  噪音排除：~UnityDirMonSyncFile~（Program Files 写保护，前轮已述）；"While compiling job … 0 functions" 计时刷屏 = Burst 打包编译正常输出，非错误。
+- 2026-10-18｜WwiseSettings.xml 直改（用户「你直接改」授权）｜已核验（sed 改后 grep 实证）：Assets/WwiseSettings.xml:3 `CopySoundBanksAsPreBuildStep` true→false（GenerateSoundBanksAsPreBuildStep 原本就 false，行 4）。打包前 bank 拷贝闸已关，Build And Run 不再走恒失败的源目录拷贝；StreamingAssets 内 bank 原样进包。
+  **Unity 缓存注意**：WwiseSettings.Instance 为静态缓存（AkWwiseEditorSettings.cs:199-216），改文件不触发域重载不生效。用户需先 Play 一次（域重载重读文件 + 顺带补 BGM 验收：[Audio] bank loaded: Main + play Play_BGM）再 Build And Run；重载前勿开 Edit→Wwise Settings 点保存（内存旧值会覆盖回 true）。
+  未验证：重打包结果 + 包内/编辑器 BGM 验收，待用户操作。
+- 2026-10-18｜VictoryPanel 成功态只留「通关」（AskUserQuestion 三选一，用户选推荐项）｜已核验（Edit 落盘 + grep 行号实证）：
+  ① VictoryPanel.cs：OnVictory +SetResetButtonVisible(false)、OnFail +SetResetButtonVisible(true)、新增 helper SetResetButtonVisible（对称既有 SetNextButtonVisible，带 null 守卫）；类头注释同步「隐藏重开（只留通关）」
+  ② prefab 现状对账（只读零改动）：GameState.prefab:684-686 _resultImage/_victorySprite/_defeatSprite 全 {fileID: 0} 未拖（=「图不对」现象根因，非代码缺）；两按钮 TMP 文案仍默认 "Button"（:264/:521）；_nextLevelButton/_resetButton 已接线（:687-688）
+- 未编译/未 runtime（Unity 侧确认）｜人工步骤已交付：拖 3 引用（image/LevelClear 图/gameover 图）+ NextButton 文案改「通关」、ReSetButton 改「重来」｜验收：胜利显 LevelClear+只剩通关钮、失败显 gameover+只剩重来钮、通关→Advance 进下一关（最后一关自动回标题）、重来→Reload 本关重开
+- 2026-10-18｜打包第二次失败根因（源码锤死）｜已核验（读 AkPluginActivator.cs 全文 + AkPluginActivatorMenus.cs + AkWwiseProjectInfo.cs + 两个 meta 落盘现状 + 用户贴构建日志）：
+  进展：WwiseSettings.xml 修改生效——"Could not find source folder" 消失，构建推进 69 秒（Addressables/URP/编译全过），新报错=构建收尾插件同名冲突（AkPluginActivator.cs:187 StopAssetEditing 处 + 事后 AssetDatabase:Refresh 处）。
+  **根因=Wwise 插件自管器与手改 meta 打架**：① EditorConfiguration 硬编码 Profile（AkPluginActivator.cs:29）→ 域重载时 ActivatePluginsForEditor(:191) 恒把 x86_64/Profile 引擎 Editor 位设 1；② 打包配置 CurrentPluginConfig 读 AkWwiseProjectData.asset（现为空→fallback "Profile"，:44-53；资产落盘实证 CurrentPluginConfig: 空）；③ 构建收尾 ActivatePluginsForDeployment(false) 把 Profile Editor 位翻回 1 → 与我上轮手改的 Release Editor=1 撞同名 → Build Failed。④ 更深坑：即便不撞名，Release 引擎在打包时也因 config("Release")!=GetCurrentConfig()("Profile") 被跳过（:162）→ 包里没引擎 DLL → 无声。**结论：手改 meta 是不稳定态，必须顺着自管器设计走**。
+  设计态（自管器期望）：Editor=Profile 引擎（唯一）；打包 config 由 CurrentPluginConfig 决定（官方开关=菜单 Assets→Wwise→Activate Plugins→Release/Profile/Debug，AkPluginActivatorMenus.cs:12 写资产）；构建期自管器自己翻 Win64 位、收尾翻回 0（正常，勿再手改）。
+  修复方案（待用户选执行方式）：A 菜单切 Release（写 CurrentPluginConfig）+ B Release meta Editor 位 1→0（Profile Editor=1 保留=设计态）→ 重新 Build And Run。未验证：修复后构建/包内声音/编辑器 BGM。
