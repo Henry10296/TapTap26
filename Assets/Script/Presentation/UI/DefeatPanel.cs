@@ -77,12 +77,14 @@ namespace TapCom.Presentation
         /// <summary>重试当前关（Defeat→Loading 边已有；Reload 装载完推进归 LevelManager）。</summary>
         public void Retry()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click
             Services.Container.Get<LevelManager>().Reload();
         }
 
         /// <summary>回标题（Defeat→TitleScreen 边已有；ExitToTitle 卸数据 + SceneFlow 切场景）。</summary>
         public void BackToTitle()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click
             Services.Container.Get<LevelManager>().ExitToTitle();
         }
     }

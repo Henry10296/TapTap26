@@ -128,6 +128,33 @@ namespace TapCom.Core
         public FailReason Reason;
     }
 
+    /// <summary>玩家起跳瞬间（音频钩子；JumpPressed 边沿触发，一按一发）。</summary>
+    public struct PlayerJumpedEvent { }
+
+    /// <summary>玩家非致死落地瞬间（音频钩子；ImpactSpeed = 落地前下落速度，变体选择归 Wwise Random Container）。</summary>
+    public struct PlayerLandedEvent
+    {
+        public float ImpactSpeed;
+    }
+
+    /// <summary>加速下落风声（音频钩子；空中下落速度过阈值一次性触发，接地后复位）。</summary>
+    public struct PlayerFastFallEvent { }
+
+    /// <summary>脚步循环开关（音频钩子；true=开始走播循环，false=停走发 Stop）。</summary>
+    public struct PlayerWalkChangedEvent
+    {
+        public bool Walking;
+    }
+
+    /// <summary>右键瞄准按下/松开沿（音频钩子；Aiming=true 开蓄力循环音，false 发 Stop）。</summary>
+    public struct PlayerAimChangedEvent
+    {
+        public bool Aiming;
+    }
+
+    /// <summary>UI 按钮点击（音频钩子；各按钮处理器开头发布）。</summary>
+    public struct UiClickedEvent { }
+
     /// <summary>开场演出开始（CG 图点击继续后由 UI 发布；相机收到开始运镜）。</summary>
     public struct IntroStartedEvent { }
 

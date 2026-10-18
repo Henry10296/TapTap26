@@ -35,6 +35,14 @@ namespace TapCom.Gameplay
         private float _airborneFallSpeed;
         private bool _fallDead;
 
+        /// <summary>加速下落风声阈值（音频钩子）：空中下落速度 ≥ 此值发 PlayerFastFallEvent，一段空中只发一次。
+        /// 须大于 MagicParams.ZeroDriftSpeed（5.9375）失重场才不持续误触；2026-10-18 拍板默认 10，Inspector 可调。</summary>
+        [SerializeField] private float _fastFallSpeed = 10f;
+
+        private bool _fastFallPlayed;
+
+        private bool _walkPlaying;
+
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
@@ -58,6 +66,7 @@ namespace TapCom.Gameplay
 
             if (_zeroQuery != null && _zeroQuery.InZeroField(_body.bounds.center))
             {
+                UpdateWalkSound(false); // 进失重场=漂移不是走，停脚步循环
                 ZeroDrift(Time.deltaTime);
                 return;
             }
@@ -66,8 +75,14 @@ namespace TapCom.Gameplay
             // Unity 6 API；若 6000.0.53f1 无 linearVelocity，回退 rb.velocity
             _rb.linearVelocity = new Vector2(move.x * _moveSpeed, _rb.linearVelocity.y);
 
+            // 脚步循环（音频钩子）：地面 + 有横输入 = 走；状态变化沿才发事件
+            UpdateWalkSound(Mathf.Abs(move.x) > 0.1f && IsGrounded());
+
             if (_actor.InputReader.JumpPressed && IsGrounded())
+            {
                 _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _jumpVelocity);
+                Services.EventBus.Publish(new PlayerJumpedEvent());
+            }
         }
 
         /// <summary>摔死检测（TASK-016）：空中帧记录下落速度（PhysX 落地碰撞会即刻清零 vy，落地帧读不回撞击速度，
@@ -82,16 +97,41 @@ namespace TapCom.Gameplay
                 if (_wasAirborne && _airborneFallSpeed >= _fallDeathSpeed)
                 {
                     _fallDead = true;
+                    UpdateWalkSound(false); // 摔死即停脚步循环（Update 早退后不再刷新）
                     Debug.Log($"[PlayerMotor] 摔死：落地前下落速度 {_airborneFallSpeed:F1} ≥ 阈值 {_fallDeathSpeed}（TASK-016）", this);
                     Services.EventBus.Publish(new FailTriggeredEvent { Reason = FailReason.Fall });
                 }
+                else if (_wasAirborne)
+                {
+                    // 非致死落地沿 → 落地音（ImpactSpeed 供 Wwise 侧；变体选择归 Random Container）
+                    Services.EventBus.Publish(new PlayerLandedEvent { ImpactSpeed = _airborneFallSpeed });
+                }
                 _airborneFallSpeed = 0f;
+                _fastFallPlayed = false; // 接地复位：下次空中段重新计风声
             }
             else
             {
                 _airborneFallSpeed = Mathf.Max(0f, -_rb.linearVelocity.y);
+                if (!_fastFallPlayed && _airborneFallSpeed >= _fastFallSpeed)
+                {
+                    _fastFallPlayed = true;
+                    Services.EventBus.Publish(new PlayerFastFallEvent());
+                }
             }
             _wasAirborne = !grounded;
+        }
+
+        /// <summary>脚步循环（音频钩子）：走/停状态变化沿才发布，避免每帧刷事件。</summary>
+        private void UpdateWalkSound(bool walking)
+        {
+            if (_walkPlaying == walking) return;
+            _walkPlaying = walking;
+            Services.EventBus.Publish(new PlayerWalkChangedEvent { Walking = walking });
+        }
+
+        private void OnDisable()
+        {
+            UpdateWalkSound(false); // 关卡重载/物体销毁时停 Loop 音，否则循环声一直响
         }
 
         /// <summary>失重漂移：W/Space 上、S 下（MoveInput.y 亦生效），松手指数缓停（原型 L1828）。</summary>

@@ -1076,7 +1076,7 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 
 ## Task ID: TASK-019-CICD自动出包（Windows）
 
-**Status: CODING（runner 已注册并首跑；workflow「PowerShell 不等 GUI」缺陷已修，待 push 后重跑）**
+**Status: CODING（runner 首跑缺陷已修 + 出包产物时间戳化已落码，两改待一起 push 重跑）**
 
 ## 目标
 
@@ -1093,6 +1093,9 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 - 落盘 2 文件：`Assets/Editor/CiBuild.cs`（导表→Addressables→BuildPlayer 三步链，平台守卫+Exit(0)/Exit(1)，namespace TapCom.EditorTools 对齐 QuickPlay 风格）、`.github/workflows/build-windows.yml`（push Dev_Pao + 手动；runs-on [self-hosted, windows]；checkout clean:false 保 Library 增量；batchmode 步骤 + artifact 上传 TapTap26-Win64-<run_number>，14 天保留；零 secret）｜已核验（Write 成功）
 - 本机验证 #1：batchmode 启动即被项目单实例锁拦，Unity exit 21「It looks like another Unity instance is running with this project open」——**脚本未执行到（CiBuild 未过编译验证）**，非 CiBuild 自身失败；物理卡点 = 用户 Unity 编辑器开着本项目，关闭后重跑同一条命令即可｜已核验（task output UNITY_EXIT_CODE=21 + log 原文）
 - 2026-10-18｜编译错误 CS0104 ×7（用户贴错，佐证 = 用户编辑器已导入编译 CiBuild.cs）：根因 = 同时 using System.Diagnostics（为 Stopwatch）与 UnityEngine → `Debug` 二义；修复 = 删 `using System.Diagnostics;` + 唯一一处改全限定 System.Diagnostics.Stopwatch｜已核验（Edit 成功）；重编译零错待用户 Unity 侧确认｜inference
+- 2026-10-18｜runner 首跑复盘（run 39121615144，用户贴日志）｜已核验：「Unity exit code: 0」+ 日志文件不存在 → 真相 = **PowerShell 不等 GUI 进程**，`& Unity.exe` 立即返回，$LASTEXITCODE 恒 0 假绿，Unity 刚启动未及写日志即被步骤回收；Get-Content 炸因 Actions powershell 预置 $ErrorActionPreference='stop'（非终止错误也致命）。修复 = `Start-Process -Wait -PassThru` 取真退出码 + 日志存在性守卫 + `Select-String` 对 `[CiBuild] SUCCESS` 标记复核（退出码与日志双自证，防再假绿）｜已核验（Edit 成功）
+- 2026-10-18｜出包时间戳化（用户指令「出包需要打时间戳」）：**单一时间戳源** = workflow `Get-Date yyyyMMdd-HHmm` → `-buildTimestamp` 传 Unity → CiBuild 解析命令行参数（本地直跑缺参回退本机当前时间）→ 产物 `Build/StandaloneWindows64/<时间戳>/<产品名>.exe` → 经 GITHUB_OUTPUT 回传 → artifact 名 `TapTap26-Win64-<时间戳>`。Build 根目录每轮整清（磁盘有界，历史靠 artifact 14 天）｜已核验（Edit 成功，CiBuild.cs 4 处 + yml 4 处）
+- 2026-10-18｜早前判断修正：runner 构建用自己 checkout（C:\actions-runner\_work\...），**与本地 Unity 编辑器单实例锁互不影响**——仅同路径 batchmode 验证才需关编辑器。watch-point：若下次构建日志出 Unity licensing/激活报错 = runner 以服务方式（SYSTEM 账号）运行看不到 Personal 授权 → 改回 run.cmd 交互跑｜inference
 - 2026-10-18｜runner 首跑（run 39121615144，C:\actions-runner 注册成功、checkout 正常）：构建步「Unity exit code: 0」+ 日志文件不存在 → 真相 = **PowerShell 不等 GUI 进程**，`&` 立即返回，$LASTEXITCODE 恒 0 假绿，Unity 刚启动未及写日志即被步骤回收；Get-Content 炸是因 Actions powershell 预置 ErrorActionPreference=stop｜已核验（用户贴 run 日志原文）。修复 = Start-Process -Wait -PassThru 拿真退出码 + 日志存在性 + Select-String 对 `[CiBuild] SUCCESS` 标记三重自证｜已核验（Edit 成功）。修正早前判断：runner 构建用自己 checkout（C:\actions-runner\_work\TapTap26\TapTap26），与本地编辑器的单实例锁互不影响——只有同路径 batchmode 才需关编辑器。watch-point：若重跑出 Unity licensing 报错 = runner 装成服务（SYSTEM 账号）看不到 Personal 授权，改回 run.cmd 交互跑｜inference
 
 ## Next Steps
@@ -1130,3 +1133,20 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
   Tier1 扩绑候选（验证后再开，AskUserQuestion 已拍先验证）：Level_Complete/Failed、Seed_Switch、Ambient_Ruin、Player_Crushed、Seed_Land、Level_Reset（需区分重开 vs 首进）。
 - 2026-10-18｜reset-BGM 落码（AskUserQuestion 拍板=现在就落）｜已核验（python 锚点断言 count==1，grep 落盘行号）：AudioManager.cs:35 AudioCatalog 加 `GameState.Loading => MusicStop`（LF 文件）。效果：R 键/重开按钮/结算重开/失败重试/下一关全过 Loading 态 → 停旧曲，Cg→Playing 从头播；首进/回标题不变。
   待用户 Unity 侧验证（重启 Unity 清插件残留 → Play）：①进关 bank loaded: Main + play Play_BGM 出声 ②投种 Play_Seed_Throw ③四配方各一声 ④R 重开 play Stop_BGM → play Play_BGM 从头 ⑤ESC 回标题 Stop_BGM ⑥顺带听暂停→继续是否叠乐（Paused→Playing 重发问题，已记 open-question）。未验证：全部。MatrixReverb 缺 DLL 悬案仍在。
+
+### 2026-10-18 音效设计表接线：玩家动作 + 种子落格（全表 6 条）
+- 需求：用户贴音效设计表「你做」；Ask 拍板：全表 6 条（Jump/Land/Walk/FastFall/Crushed/Seed_Land；Throw 已接）+ FastFall 新增 Inspector 字段默认 10。
+- 改动 3 文件（未编译——等 Unity 刷新看 Console）：
+  - GameEvents.cs（CRLF）：FailTriggeredEvent 后新增 PlayerJumpedEvent / PlayerLandedEvent{ImpactSpeed} / PlayerFastFallEvent / PlayerWalkChangedEvent{Walking}。
+  - PlayerMotor.cs（CRLF）：新增 _fastFallSpeed=10 + _fastFallPlayed + _walkPlaying；跳跃分支发 Jumped；落地沿非致死发 Landed（ImpactSpeed=_airborneFallSpeed），致死仍只发 Fall；空中速度≥_fastFallSpeed 一次性发 FastFall，接地复位；UpdateWalkSound(地面+横输入>0.1) 变化沿发 Walk 开关；零重力分支/摔死处/新 OnDisable 三处停走。
+  - AudioManager.cs（LF）：AudioCatalog +7 常量 +6 For()（FailTriggered→仅 Crush 发 Play_Player_Crushed；CellWorldChanged→仅 Added&&MoverId==0 发 Play_Seed_Land）；AudioManager 构造 +6 Subscribe/OnXxx。
+- 已核验（读码）：JumpPressed 边沿触发（PlayerInputReader.cs:29 WasPressedThisFrame）不连发；ZeroDriftSpeed=5.9375（MagicParams.cs:57）→ 阈值 10 失重场不误触；种子落格全库唯一锚 MagicCircuitSimulator.cs:230-231（Added 且 MoverId=0，:275 运动格落定带 mover.Id）；Crush 事件已在 PlayerCrushDetector.cs:45；bank 含 Stop_Player_Walk（Main.txt ID 4125394165）。
+- inference（未编译/未跑 runtime）：出声验证靠 Editor Play 看 Wwise 日志；Seed_Land 不区分撞方块/落地面（按落定触发）；失重场贴地沿可能触发 Landed；Walk 抖动可能 Play/Stop 快速交替；Cg/Victory 期间 Motor 无状态门（既有行为）脚步音跟随。
+- 下一步：用户 Unity 回 Ctrl+R 刷新编译 → Play 跑验收清单（跳/落地/走停/大落差风声/被砸/种子落格/R 重开时走路声停）。
+
+### 2026-10-18 全表接线第二批（13 Event；Status 挂起）
+- 拍板：UI_Click 9 按钮全接；Victory/Defeat 结算时 BGM+环境即停（按设计表「通关/死亡时停止」，改上轮行为）；Status 开关组 bank 缺失挂起。
+- 改动 8 文件 20 hunk（未编译）：GameEvents +PlayerAimChangedEvent{Aiming}/UiClickedEvent；PlayerThrower 瞄准沿统一（_wasAiming 判定提前共判，随机分支改读 aimToggled）+ 非 Playing 早退停瞄准音 + 新 OnDisable 兜底；AudioManager +13 常量（SpellConfirm=public）+ ForAmbient/ForReset + For(CellWorldChanged) 四分诊 + For(FailTriggered) else→LevelFailed + For(GameStateChanged) 增 Victory/Defeat→MusicStop + 4 新订阅 + OnStateChanged 三音并发 + OnSpellCast 叠加确认音；UI 5 文件 9 处按钮处理器首行 Publish UiClickedEvent（TitleScreenUI×2/PausePanel×2/VictoryPanel×2/DefeatPanel×2/ResetButton×1，R 键与按钮共用 ResetLevel 路径）。
+- 已核验（读码）：AimHeld 右键按住已存在（PlayerInputReader.cs:38 IsPressed）；_wasAiming 原随机分支已用（PlayerThrower:46,78-80）；R 键热键存在（ResetButton.cs:25 rKey.wasPressedThisFrame）；GameStateChangedEvent.From 存在（GameManager.cs:10）；bank 无 Status/switch 组（Main.txt grep -i 仅 Play_Seed_Switch 事件命中）→ Status 挂起；种子耗尽失败不存在（FailReason 仅 Fall/Crush/TimeUp，Thrower 拒投不判败）→ open-question。
+- inference（未编译/未跑 runtime）：全部出声待 Editor Play 验证；blast 弹飞 N 格叠 N 声 Rock_Fall、zero 消失 N 格叠 N 声 Rock_Crumble（Wwise voice 限流兜底，试听定）；Seed_Switch 随机模式（默认关）瞄准重掷也响；Paused→Playing 重发 Play_BGM/Play_Ambient_Ruin 叠加为既有 open-question（本轮未动）；Status 需 bank 补 status_Switch/Badly_status + 紧张触发条件定义 + 后端 SetSwitch 扩展。
+- 下一步：用户编译看 Console → Play 全表验收（见汇报清单）。
