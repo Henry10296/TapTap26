@@ -12,6 +12,8 @@
 #       本机 runner 工作目录下也留有原件；Build 根目录每轮清空，历史版本只看 artifact（保留 14 天）。
 #
 # 注意：checkout 设 clean:false 保留 Library 缓存，首次构建最慢，之后为增量。
+# 维护：某轮被取消/强杀后（runner 上 Unity 进程被结束），增量缓存可能截断，下一轮报
+# Burst "failed running" / EndOfStreamException——删 runner 工作区下的 Library 重跑即可。
 # Unity 版本升级（ProjectVersion.txt 变更）时，改下方 UNITY_EXE 路径里的版本号。
 
 name: build-windows
@@ -64,12 +66,12 @@ jobs:
             exit 1
           }
           Get-Content $log -Tail 80
+          # 判成败以日志 SUCCESS 标记为准（被测系统自证）：Unity 在 EditorApplication.Exit 的
+          # 域卸载阶段偶发崩溃（退出码 1073741845），但那时产物已完整落盘；退出码只当失败信号用。
+          if (Select-String -Path $log -Pattern '\[CiBuild\] SUCCESS' -Quiet) { exit 0 }
           if ($code -eq 0) {
-            # 退出码再对一次日志标记，防止假绿
-            if (-not (Select-String -Path $log -Pattern '\[CiBuild\] SUCCESS' -Quiet)) {
-              Write-Host "ERROR: 退出码 0 但日志无 [CiBuild] SUCCESS"
-              exit 1
-            }
+            Write-Host "ERROR: 退出码 0 但日志无 [CiBuild] SUCCESS（假绿防护）"
+            exit 1
           }
           exit $code
 

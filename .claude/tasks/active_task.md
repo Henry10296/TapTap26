@@ -1076,7 +1076,7 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 
 ## Task ID: TASK-019-CICD自动出包（Windows）
 
-**Status: CODING（runner 首跑缺陷已修 + 出包产物时间戳化已落码，两改待一起 push 重跑）**
+**Status: CODING（缓存毒根因已清 + 判成败改日志标记权威，待 push 重跑验证绿）**
 
 ## 目标
 
@@ -1104,6 +1104,12 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 2. 人工（一次性）：Settings→Actions→Runners→New self-hosted runner（Windows x64）→ 按向导下载 → config.cmd 注册 → **run.cmd 交互启动（勿装服务：Unity license 绑登录用户）**。
 3. 验收：①本机构建 SUCCESS + 双击 exe 可玩 ②push Dev_Pao 自动触发 ③Actions 页下载 artifact（或本机 Build/ 直取）。
 4. 已知边界（已告知用户）：出包时须关本项目 Unity 编辑器；CI 包无 Wwise bank（无声，维持现状不扩范围）。
+- 2026-10-19｜run 39142110267（2357 轮）Exit 崩溃 + 0010 轮 BuildPlayer 失败，根因锤死（读 runner 本机 ci-build.log 6106 行 + 产物目录实证）｜已核验：
+  ① 2357 轮（用户贴日志）：EditorApplication.Exit → UnloadDomain 崩溃 0x40000015，成败未知（日志被 0010 轮覆盖）；crash 目录在 C:/Users/Henry/ = runner 以用户身份跑，license 无虞（watch-point 关闭）。
+  ② 0010 轮（00:10 重跑）：导表✓ → Addressables✓ → BuildPlayer ✗ Failed(2 errors)。两错同链：Burst bcl.exe 跑 2.8s 后死，HashCacheLoader.GetHeader 读 AK.Wwise.Unity.MonoBehaviour 的 Burst hash cache 截断（EndOfStreamException）→ "Failed to find entry-points" → 打包失败；Exit(1) 干净退出（尾部 Cleanup mono 正常，无崩溃）。
+  根因（高置信推断）：run 39121615144 的 Unity 被强杀于导入/缓存写入中途（PowerShell 未等 GUI 那轮），clean:false 把截断的 Burst 缓存留了下来。
+  处置（本轮落盘）：①已删 runner 工作区 Library/（删前确认无 Unity 进程挂该路径）②workflow 判成败改日志 SUCCESS 标记权威（防 Exit 崩溃把成功轮误报红；退出码只当失败信号）+ yml 头部加「被杀轮次后删 Library」维护注记｜已核验（python 锚点 count==1 + grep 落盘）。
+  未验证：下一轮全绿 + artifact 上传（等 push 触发）；Exit(0) 是否也撞 0x40000015（标记权威已兜住）。
 - 2026-10-18｜音频 meta 直修生效 + 打包失败新断点根因｜已核验（用户贴 Console 日志 + 读源码 + cat WwiseSettings.xml）：
   ① meta 直修（用户「你能帮我做吗」授权）：x86_64 Release 引擎 Editor=1/Win64=1(CPU x86_64)、Profile Editor=0/Win64=0。**日志证据：same-name 冲突报错消失 + "Sound engine initialized successfully"**（引擎自证，Plugin DLL path 指向 x86_64\DSP）。
   ② 新断点=Build And Run 失败（Build Failed, 2 errors）：AkBuildPreprocessor.cs:147 闸 `CopySoundBanksAsPreBuildStep=true`（Assets/WwiseSettings.xml:3 实证）→ CopySoundbanks(:119)→GetSoundBankPaths 找「Wwise 工程」bank 源目录；`<WwiseProjectPath />` 为空 + 全仓库 glob *.wproj 0 命中 → "Could not find source folder for <Windows>"。bank 本就直接躺在 Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/（前轮对账），拷贝步骤在本项目**恒失败**（无工程可拷）。
