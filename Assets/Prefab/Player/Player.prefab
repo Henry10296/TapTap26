@@ -38,7 +38,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.78, y: -4.07, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: -1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3654992772063730061}
@@ -89,7 +89,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 6
-  m_Sprite: {fileID: 21300000, guid: 55fb15702c5a878429bac16a14516068, type: 3}
+  m_Sprite: {fileID: 21300000, guid: b3856723e5681cc4ab809b37f4c38f03, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -164,8 +164,8 @@ BoxCollider2D:
   m_Offset: {x: 0.032760262, y: -0.41431165}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 3.2, y: 2.4}
+    pivot: {x: 0.5, y: 0.6}
+    oldSize: {x: 2.3272727, y: 2.3272727}
     newSize: {x: 0.2, y: 0.2}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -233,6 +233,7 @@ MonoBehaviour:
     m_Bits: 8
   _groundCheckSize: {x: 0.9, y: 0.08}
   _fallDeathSpeed: 14
+  _fastFallSpeed: 10
 --- !u!95 &1091768338831821633
 Animator:
   serializedVersion: 7
@@ -336,7 +337,7 @@ Transform:
   m_GameObject: {fileID: 3127059632357794682}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.41, y: 1.27, z: 0}
+  m_LocalPosition: {x: 0.04, y: 1.16, z: 0}
   m_LocalScale: {x: 0.3, y: 0.3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -409,9 +410,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52b0675dc4f1e734a954e0b077787d22, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _blueSprite: {fileID: 21300000, guid: 204cf0dcd9b40af4ea13496afa884a4a, type: 3}
-  _redSprite: {fileID: 21300000, guid: f039fe6b11800a543abb583705e75ee5, type: 3}
-  _yellowSprite: {fileID: 21300000, guid: 18fca2adb0fb18446982644c05a813a5, type: 3}
+  _blueSprite: {fileID: 21300000, guid: 7d9e3ff6c6012874a824cc80fc520425, type: 3}
+  _redSprite: {fileID: 21300000, guid: a71ef72b321f6654a80820ad74a611a8, type: 3}
+  _yellowSprite: {fileID: 21300000, guid: 93faaae57d8c6c849b4658173a565a58, type: 3}
 --- !u!1 &8245372232215946392
 GameObject:
   m_ObjectHideFlags: 0
@@ -437,7 +438,7 @@ Transform:
   m_GameObject: {fileID: 8245372232215946392}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.41, y: 1.04, z: 0}
+  m_LocalPosition: {x: -0.29, y: 0.43, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

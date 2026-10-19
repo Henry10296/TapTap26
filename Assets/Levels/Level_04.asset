@@ -9242,7 +9242,7 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
     Locked: 1
   SpawnPoint: {x: -5, y: -7, z: 0}
-  GoalPoint: {x: 36, y: -8, z: 0}
+  GoalPoint: {x: 36, y: -7, z: 0}
   CgImage: {fileID: 0}
   TimeLimit: 0
   BlueSeeds: 2

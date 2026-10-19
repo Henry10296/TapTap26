@@ -2551,18 +2551,6 @@ MonoBehaviour:
     Magic: 0
     Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
     Locked: 1
-  - Pos: {x: 4, y: -7, z: 0}
-    Type: 0
-    Gravity: 1
-    Magic: 0
-    Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
-    Locked: 1
-  - Pos: {x: 5, y: -7, z: 0}
-    Type: 0
-    Gravity: 1
-    Magic: 0
-    Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
-    Locked: 1
   - Pos: {x: 8, y: -7, z: 0}
     Type: 0
     Gravity: 1
@@ -2773,18 +2761,6 @@ MonoBehaviour:
     Magic: 0
     Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
     Locked: 1
-  - Pos: {x: 4, y: -6, z: 0}
-    Type: 0
-    Gravity: 1
-    Magic: 0
-    Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
-    Locked: 1
-  - Pos: {x: 5, y: -6, z: 0}
-    Type: 0
-    Gravity: 1
-    Magic: 0
-    Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
-    Locked: 1
   - Pos: {x: 9, y: -6, z: 0}
     Type: 0
     Gravity: 1
@@ -2954,12 +2930,6 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
     Locked: 1
   - Pos: {x: 4, y: -5, z: 0}
-    Type: 0
-    Gravity: 1
-    Magic: 0
-    Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
-    Locked: 1
-  - Pos: {x: 5, y: -5, z: 0}
     Type: 0
     Gravity: 1
     Magic: 0
@@ -4994,7 +4964,7 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
     Locked: 1
   SpawnPoint: {x: -5, y: -6, z: 0}
-  GoalPoint: {x: 26, y: -1, z: 0}
+  GoalPoint: {x: 25, y: 0, z: 0}
   CgImage: {fileID: 0}
   TimeLimit: 0
   BlueSeeds: 0

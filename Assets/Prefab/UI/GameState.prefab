@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1485961835438802606}
   - component: {fileID: 6579930803495290298}
   - component: {fileID: 4728126692756945862}
-  m_Layer: 5
+  m_Layer: 6
   m_Name: NextButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -132,7 +132,7 @@ GameObject:
   - component: {fileID: 2944142117964912283}
   - component: {fileID: 6258989902469753262}
   - component: {fileID: 7553905852434987670}
-  m_Layer: 5
+  m_Layer: 6
   m_Name: "image\uFF08\u5728LevelClear\u548Cgameover\u4E24\u5F20\u56FE\u5207\u6362\uFF09"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -207,7 +207,7 @@ GameObject:
   - component: {fileID: 4654702116072174391}
   - component: {fileID: 5676217316413573648}
   - component: {fileID: 5388863696765399198}
-  m_Layer: 5
+  m_Layer: 6
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -344,7 +344,7 @@ GameObject:
   - component: {fileID: 5987825971604997055}
   - component: {fileID: 5321221641507085313}
   - component: {fileID: 5339966396680454114}
-  m_Layer: 5
+  m_Layer: 6
   m_Name: ReSetButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -464,7 +464,7 @@ GameObject:
   - component: {fileID: 2262079232563888882}
   - component: {fileID: 3814313505722572468}
   - component: {fileID: 1866420886103904244}
-  m_Layer: 5
+  m_Layer: 6
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -601,7 +601,7 @@ GameObject:
   - component: {fileID: 7031946627310857220}
   - component: {fileID: 4225198531953554492}
   - component: {fileID: 8255251242754948643}
-  m_Layer: 5
+  m_Layer: 6
   m_Name: GameState
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -651,7 +651,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.9254902}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
