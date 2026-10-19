@@ -1,0 +1,320 @@
+#
+# There is insufficient memory for the Java Runtime Environment to continue.
+# Native memory allocation (mmap) failed to map 264241152 bytes. Error detail: G1 virtual space
+# Possible reasons:
+#   The system is out of physical RAM or swap space
+#   This process is running with CompressedOops enabled, and the Java Heap may be blocking the growth of the native heap
+# Possible solutions:
+#   Reduce memory load on the system
+#   Increase physical memory or swap space
+#   Check if swap backing store is full
+#   Decrease Java heap size (-Xmx/-Xms)
+#   Decrease number of Java threads
+#   Decrease Java thread stack sizes (-Xss)
+#   Set larger code cache with -XX:ReservedCodeCacheSize=
+#   JVM is running with Zero Based Compressed Oops mode in which the Java heap is
+#     placed in the first 32GB address space. The Java Heap base address is the
+#     maximum limit for the native heap growth. Please use -XX:HeapBaseMinAddress
+#     to set the Java Heap base and to place the Java Heap above 32GB virtual address.
+# This output file may be truncated or incomplete.
+#
+#  Out of Memory Error (os_windows.cpp:3898), pid=35164, tid=6932
+#
+# JRE version:  (21.0.6+9) (build )
+# Java VM: OpenJDK 64-Bit Server VM (21.0.6+9-b631.42, mixed mode, sharing, tiered, compressed oops, compressed class ptrs, g1 gc, windows-amd64)
+# No core dump will be written. Minidumps are not enabled by default on client versions of Windows
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: -Djava.io.tmpdir=C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\tmp\statistics-uploader com.intellij.internal.statistic.uploader.EventLogUploader --ide-token C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\token --recorders FUS;MP;IJ_MAP;ML --device-fus 0804251b678ab89-bb42-4b69-a3e4-bc5f74e44405 --bucket-fus 210 --machine-fus e669a98546e91e62f16d0685518919b3cca8f2abfb800faa212eede69633073e --id-revision-fus 0 --files-fus C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\FUS\ca09-4850-b0f7-d5efb7686821-243.26574.73-release.log --escape-fus false --device-mp 08042511ec660e3-a62b-411f-8ee9-aa53d676ba61 --bucket-mp 230 --machine-mp 562c769ab49009148628e4a5a7ea3e1cb53f02eef2a611aa5098fe1616e510a7 --id-revision-mp 0 --files-mp C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\MP\ace5-4828-b2d0-b600e4149a18-243.26574.73-release.log --escape-mp false --device-ij_map 0804251b678ab89-bb42-4b69-a3e4-bc5f74e44405 --bucket-ij_map 210 --machine-ij_map e669a98546e91e62f16d0685518919b3cca8f2abfb800faa212eede69633073e --id-revision-ij_map 0 --files-ij_map C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\0570-4a4e-8e9b-7072cb9e60c9-243.26574.73-release.log;C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\2608-40c7-a9c0-5274269844e2-243.26574.73-release.log;C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\2c1b-4c9e-9eb6-a3791b760a95-243.26574.73-release.log;C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\3c12-4278-baf9-a53ee1896839-243.26574.73-release.log;C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\3d76-4e40-8c96-aa679d303cf9-243.26574.73-release.log --escape-ij_map false --device-ml 0804251b678ab89-bb42-4b69-a3e4-bc5f74e44405 --bucket-ml 210 --machine-ml e669a98546e91e62f16d0685518919b3cca8f2abfb800faa212eede69633073e --id-revision-ml 0 --files-ml C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\ML\d2cc-4816-891d-8b0b84d0e8ed-243.26574.73-release.log --escape-ml false --url https://resources.jetbrains.com.cn/storage/fus/config/v4/%s/%s.json --product RD --product-version 2024.3.8 --baseline-version 243 --user-agent JetBrains Rider/243.26574.73 --extra-headers 
+
+Host: Intel(R) Core(TM) i9-14900HX, 32 cores, 15G,  Windows 11 , 64 bit Build 26100 (10.0.26100.9711)
+Time: Sat Oct 17 22:47:12 2026 Malay Peninsula Standard Time elapsed time: 0.025951 seconds (0d 0h 0m 0s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x00000243b4990d80):  JavaThread "Unknown thread" [_thread_in_vm, id=6932, stack(0x000000bfee900000,0x000000bfeea00000) (1024K)]
+
+Stack: [0x000000bfee900000,0x000000bfeea00000]
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [jvm.dll+0x6e5d39]
+V  [jvm.dll+0x8c4133]
+V  [jvm.dll+0x8c668e]
+V  [jvm.dll+0x8c6d73]
+V  [jvm.dll+0x288f76]
+V  [jvm.dll+0x6e25f5]
+V  [jvm.dll+0x6d60aa]
+V  [jvm.dll+0x3635bb]
+V  [jvm.dll+0x36b186]
+V  [jvm.dll+0x3bd4b6]
+V  [jvm.dll+0x3bd788]
+V  [jvm.dll+0x335d2c]
+V  [jvm.dll+0x336a1b]
+V  [jvm.dll+0x88b589]
+V  [jvm.dll+0x3ca688]
+V  [jvm.dll+0x874698]
+V  [jvm.dll+0x45f04e]
+V  [jvm.dll+0x460d31]
+C  [jli.dll+0x52ab]
+C  [ucrtbase.dll+0x2cd30]
+C  [KERNEL32.DLL+0x2dda7]
+C  [ntdll.dll+0x7ee4c]
+
+
+---------------  P R O C E S S  ---------------
+
+Threads class SMR info:
+_java_thread_list=0x00007ff81194a148, length=0, elements={
+}
+
+Java Threads: ( => current thread )
+Total: 0
+
+Other Threads:
+  0x00000243b49fada0 WorkerThread "GC Thread#0"                     [id=2904, stack(0x000000bfeea00000,0x000000bfeeb00000) (1024K)]
+  0x00000243b4a0c0b0 ConcurrentGCThread "G1 Main Marker"            [id=10320, stack(0x000000bfeeb00000,0x000000bfeec00000) (1024K)]
+  0x00000243b4a0cac0 WorkerThread "G1 Conc#0"                       [id=23452, stack(0x000000bfeec00000,0x000000bfeed00000) (1024K)]
+
+[error occurred during error reporting (printing all threads), id 0xc0000005, EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007ff811038de7]
+VM state: not at safepoint (not fully initialized)
+
+VM Mutex/Monitor currently owned by a thread:  ([mutex/lock_event])
+[0x00007ff8119beb30] Heap_lock - owner thread: 0x00000243b4990d80
+
+Heap address: 0x0000000704a00000, size: 4022 MB, Compressed Oops mode: Zero based, Oop shift amount: 3
+
+CDS archive(s) mapped at: [0x0000000000000000-0x0000000000000000-0x0000000000000000), size 0, SharedBaseAddress: 0x0000000800000000, ArchiveRelocationMode: 1.
+Narrow klass base: 0x0000000000000000, Narrow klass shift: 0, Narrow klass range: 0x0
+
+GC Precious Log:
+ CardTable entry size: 512
+ Card Set container configuration: InlinePtr #cards 4 size 8 Array Of Cards #cards 16 size 48 Howl #buckets 8 coarsen threshold 3686 Howl Bitmap #cards 512 size 80 coarsen threshold 460 Card regions per heap region 1 cards per card region 4096
+
+Heap:
+ garbage-first heap   total 0K, used 0K [0x0000000704a00000, 0x0000000800000000)
+  region size 2048K, 0 young (0K), 0 survivors (0K)
+ Metaspace       used 0K, committed 0K, reserved 0K
+  class space    used 0K, committed 0K, reserved 0K
+
+Heap Regions: E=young(eden), S=young(survivor), O=old, HS=humongous(starts), HC=humongous(continues), CS=collection set, F=free, TAMS=top-at-mark-start, PB=parsable bottom
+
+Card table byte_map: [0x00000243c9430000,0x00000243c9c10000] _byte_map_base: 0x00000243c5c0b000
+
+Marking Bits: (CMBitMap*) 0x00000243b49fbbc0
+ Bits: [0x00000243c9c10000, 0x00000243cdae8000)
+
+GC Heap History (0 events):
+No events
+
+Dll operation events (1 events):
+Event: 0.006 Loaded shared library D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\java.dll
+
+Deoptimization events (0 events):
+No events
+
+Classes loaded (0 events):
+No events
+
+Classes unloaded (0 events):
+No events
+
+Classes redefined (0 events):
+No events
+
+Internal exceptions (0 events):
+No events
+
+ZGC Phase Switch (0 events):
+No events
+
+VM Operations (0 events):
+No events
+
+Memory protections (0 events):
+No events
+
+Nmethod flushes (0 events):
+No events
+
+Events (0 events):
+No events
+
+
+Dynamic libraries:
+0x00007ff68aec0000 - 0x00007ff68aeca000 	D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\java.exe
+0x00007ff918960000 - 0x00007ff918bc8000 	C:\WINDOWS\SYSTEM32\ntdll.dll
+0x00007ff9175e0000 - 0x00007ff9176ab000 	C:\WINDOWS\System32\KERNEL32.DLL
+0x00007ff9161b0000 - 0x00007ff9165b1000 	C:\WINDOWS\System32\KERNELBASE.dll
+0x00007ff915b50000 - 0x00007ff915c9c000 	C:\WINDOWS\System32\ucrtbase.dll
+0x00007ff8bd1d0000 - 0x00007ff8bd1eb000 	D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\VCRUNTIME140.dll
+0x00007ff8656b0000 - 0x00007ff8656c8000 	D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\jli.dll
+0x00007ff917ea0000 - 0x00007ff918077000 	C:\WINDOWS\System32\USER32.dll
+0x00007ff916180000 - 0x00007ff9161a7000 	C:\WINDOWS\System32\win32u.dll
+0x00007ff916d10000 - 0x00007ff916d3b000 	C:\WINDOWS\System32\GDI32.dll
+0x00007ff8fb3f0000 - 0x00007ff8fb681000 	C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9711_none_3e07b8b0e334e825\COMCTL32.dll
+0x00007ff915f00000 - 0x00007ff91602a000 	C:\WINDOWS\System32\gdi32full.dll
+0x00007ff9165c0000 - 0x00007ff916663000 	C:\WINDOWS\System32\msvcp_win.dll
+0x00007ff918590000 - 0x00007ff918639000 	C:\WINDOWS\System32\msvcrt.dll
+0x00007ff917e60000 - 0x00007ff917e91000 	C:\WINDOWS\System32\IMM32.DLL
+0x00007ff909e20000 - 0x00007ff909e2c000 	D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\vcruntime140_1.dll
+0x00007ff85b580000 - 0x00007ff85b60d000 	D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\msvcp140.dll
+0x00007ff810cf0000 - 0x00007ff811ab1000 	D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\server\jvm.dll
+0x00007ff916c40000 - 0x00007ff916cfc000 	C:\WINDOWS\System32\ADVAPI32.dll
+0x00007ff918280000 - 0x00007ff918328000 	C:\WINDOWS\System32\sechost.dll
+0x00007ff9180a0000 - 0x00007ff9181b8000 	C:\WINDOWS\System32\RPCRT4.dll
+0x00007ff918640000 - 0x00007ff9186c1000 	C:\WINDOWS\System32\WS2_32.dll
+0x00007ff914fa0000 - 0x00007ff914ffe000 	C:\WINDOWS\SYSTEM32\POWRPROF.dll
+0x00007ff90af60000 - 0x00007ff90af6b000 	C:\WINDOWS\SYSTEM32\VERSION.dll
+0x00007ff906aa0000 - 0x00007ff906ad7000 	C:\WINDOWS\SYSTEM32\WINMM.dll
+0x00007ff914f60000 - 0x00007ff914f75000 	C:\WINDOWS\SYSTEM32\UMPDC.dll
+0x00007ff914250000 - 0x00007ff91426b000 	C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+0x00007ff8bd040000 - 0x00007ff8bd04a000 	D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\jimage.dll
+0x00007ff912ce0000 - 0x00007ff912f2c000 	C:\WINDOWS\SYSTEM32\DBGHELP.DLL
+0x00007ff916d40000 - 0x00007ff9170cb000 	C:\WINDOWS\System32\combase.dll
+0x00007ff9184a0000 - 0x00007ff918579000 	C:\WINDOWS\System32\OLEAUT32.dll
+0x00007ff8eb8b0000 - 0x00007ff8eb8eb000 	C:\WINDOWS\SYSTEM32\dbgcore.DLL
+0x00007ff915e40000 - 0x00007ff915eec000 	C:\WINDOWS\System32\bcryptPrimitives.dll
+0x00007ff896aa0000 - 0x00007ff896ac0000 	D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\java.dll
+
+dbghelp: loaded successfully - version: 4.0.5 - missing functions: none
+symbol engine: initialized successfully - sym options: 0x614 - pdb path: .;D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin;C:\WINDOWS\SYSTEM32;C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9711_none_3e07b8b0e334e825;D:\Code tool\JetBrains Rider 2024.3.7\jbr\bin\server
+
+VM Arguments:
+jvm_args: -Djava.io.tmpdir=C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\tmp\statistics-uploader 
+java_command: com.intellij.internal.statistic.uploader.EventLogUploader --ide-token C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\token --recorders FUS;MP;IJ_MAP;ML --device-fus 0804251b678ab89-bb42-4b69-a3e4-bc5f74e44405 --bucket-fus 210 --machine-fus e669a98546e91e62f16d0685518919b3cca8f2abfb800faa212eede69633073e --id-revision-fus 0 --files-fus C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\FUS\ca09-4850-b0f7-d5efb7686821-243.26574.73-release.log --escape-fus false --device-mp 08042511ec660e3-a62b-411f-8ee9-aa53d676ba61 --bucket-mp 230 --machine-mp 562c769ab49009148628e4a5a7ea3e1cb53f02eef2a611aa5098fe1616e510a7 --id-revision-mp 0 --files-mp C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\MP\ace5-4828-b2d0-b600e4149a18-243.26574.73-release.log --escape-mp false --device-ij_map 0804251b678ab89-bb42-4b69-a3e4-bc5f74e44405 --bucket-ij_map 210 --machine-ij_map e669a98546e91e62f16d0685518919b3cca8f2abfb800faa212eede69633073e --id-revision-ij_map 0 --files-ij_map C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\0570-4a4e-8e9b-7072cb9e60c9-243.26574.73-release.log;C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\2608-40c7-a9c0-5274269844e2-243.26574.73-release.log;C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\2c1b-4c9e-9eb6-a3791b760a95-243.26574.73-release.log;C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\3c12-4278-baf9-a53ee1896839-243.26574.73-release.log;C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\IJ_MAP\3d76-4e40-8c96-aa679d303cf9-243.26574.73-release.log --escape-ij_map false --device-ml 0804251b678ab89-bb42-4b69-a3e4-bc5f74e44405 --bucket-ml 210 --machine-ml e669a98546e91e62f16d0685518919b3cca8f2abfb800faa212eede69633073e --id-revision-ml 0 --files-ml C:\Users\Henry\AppData\Local\JetBrains\Rider2024.3\event-log-data\logs\ML\d2cc-4816-891d-8b0b84d0e8ed-243.26574.73
+java_class_path (initial): D:\Code tool\JetBrains Rider 2024.3.7\lib\util-8.jar;D:\Code tool\JetBrains Rider 2024.3.7\lib\annotations.jar;D:\Code tool\JetBrains Rider 2024.3.7\lib\lib-client.jar;D:\Code tool\JetBrains Rider 2024.3.7\lib\stats.jar
+Launcher Type: SUN_STANDARD
+
+[Global flags]
+     intx CICompilerCount                          = 15                                        {product} {ergonomic}
+     uint ConcGCThreads                            = 6                                         {product} {ergonomic}
+     uint G1ConcRefinementThreads                  = 23                                        {product} {ergonomic}
+   size_t G1HeapRegionSize                         = 2097152                                   {product} {ergonomic}
+    uintx GCDrainStackTargetSize                   = 64                                        {product} {ergonomic}
+   size_t InitialHeapSize                          = 264241152                                 {product} {ergonomic}
+   size_t MarkStackSize                            = 4194304                                   {product} {ergonomic}
+   size_t MaxHeapSize                              = 4217372672                                {product} {ergonomic}
+   size_t MinHeapDeltaBytes                        = 2097152                                   {product} {ergonomic}
+   size_t MinHeapSize                              = 8388608                                   {product} {ergonomic}
+    uintx NonNMethodCodeHeapSize                   = 8192380                                {pd product} {ergonomic}
+    uintx NonProfiledCodeHeapSize                  = 121732930                              {pd product} {ergonomic}
+    uintx ProfiledCodeHeapSize                     = 121732930                              {pd product} {ergonomic}
+    uintx ReservedCodeCacheSize                    = 251658240                              {pd product} {ergonomic}
+     bool SegmentedCodeCache                       = true                                      {product} {ergonomic}
+   size_t SoftMaxHeapSize                          = 4217372672                             {manageable} {ergonomic}
+     bool UseCompressedOops                        = true                           {product lp64_product} {ergonomic}
+     bool UseG1GC                                  = true                                      {product} {ergonomic}
+     bool UseLargePagesIndividualAllocation        = false                                  {pd product} {ergonomic}
+
+Logging:
+Log output configuration:
+ #0: stdout all=warning uptime,level,tags foldmultilines=false
+ #1: stderr all=off uptime,level,tags foldmultilines=false
+
+Environment Variables:
+JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-17.0.16.8-hotspot\
+PATH=D:\Meta Horizon\Support\oculus-runtime;C:\Program Files\Eclipse Adoptium\jdk-17.0.16.8-hotspot\bin;C:\Python313\Scripts\;C:\Python313\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\Git\cmd;C:\Program Files\Docker\Docker\resources\bin;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;d:\Code tool\cursor\resources\app\bin;C:\Program Files\dotnet\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;D:\Code tool\jEdit;C:\Program Files\GitHub CLI\;C:\Program Files (x86)\cloudflared\;C:\Users\Henry\miniconda3;C:\Users\Henry\miniconda3\Library\mingw-w64\bin;C:\Users\Henry\miniconda3\Library\usr\bin;C:\Users\Henry\miniconda3\Library\bin;C:\Users\Henry\miniconda3\Scripts;C:\Users\Henry\scoop\shims;C:\Users\Henry\.cargo\bin;C:\Users\Henry\AppData\Local\Microsoft\WindowsApps;C:\ProgramData\Henry\GitHubDesktop\bin;C:\Users\Henry\.dotnet\tools;D:\Code tool\Microsoft VS Code\bin;C:\Users\Henry\AppData\Local\Programs\Ollama;C:\Users\Henry\.lmstudio\bin;C:\Users\Henry\AppData\Roaming\npm;C:\Users\Henry\.jetbrains\helm;C:\Users\Henry\.dotnet\tools;C:\Users\Henry\AppData\Local\JetBrains\Toolbox\scripts;C:\Users\Henry\AppData\Roaming\TinyTeX\bin\windows;C:\Users\Henry\AppData\Roaming\Python\Python313\Scripts;C:\Users\Henry\bin
+USERNAME=Henry
+OS=Windows_NT
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
+TMP=C:\Users\Henry\AppData\Local\Temp
+TEMP=C:\Users\Henry\AppData\Local\Temp
+
+
+
+
+Periodic native trim disabled
+
+JNI global refs:
+JNI global refs: 0, weak refs: 0
+
+JNI global refs memory usage: 0, weak refs: 0
+
+Process memory usage:
+Resident Set Size: 13636K (0% of 16473912K total physical memory with 1548500K free physical memory)
+
+OOME stack traces (most recent first):
+Classloader memory used:
+
+---------------  S Y S T E M  ---------------
+
+OS:
+ Windows 11 , 64 bit Build 26100 (10.0.26100.9711)
+OS uptime: 1 days 1:42 hours
+Hyper-V role detected
+
+CPU: total 32 (initial active 32) (16 cores per cpu, 2 threads per core) family 6 model 183 stepping 1 microcode 0x120, cx8, cmov, fxsr, ht, mmx, 3dnowpref, sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, lzcnt, tsc, tscinvbit, avx, avx2, aes, erms, clmul, bmi1, bmi2, adx, sha, fma, vzeroupper, clflush, clflushopt, clwb, hv, serialize, rdtscp, rdpid, fsrm, f16c, cet_ibt, cet_ss
+Processor Information for processor 0
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 1
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 2
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 3
+  Max Mhz: 2200, Current Mhz: 1466, Mhz Limit: 2200
+Processor Information for processor 4
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 5
+  Max Mhz: 2200, Current Mhz: 1466, Mhz Limit: 2200
+Processor Information for processor 6
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 7
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 8
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 9
+  Max Mhz: 2200, Current Mhz: 1466, Mhz Limit: 2200
+Processor Information for processor 10
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 11
+  Max Mhz: 2200, Current Mhz: 1466, Mhz Limit: 2200
+Processor Information for processor 12
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 13
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 14
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 15
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 16
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 17
+  Max Mhz: 2200, Current Mhz: 1512, Mhz Limit: 2200
+Processor Information for processor 18
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 19
+  Max Mhz: 2200, Current Mhz: 1512, Mhz Limit: 2200
+Processor Information for processor 20
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 21
+  Max Mhz: 2200, Current Mhz: 1512, Mhz Limit: 2200
+Processor Information for processor 22
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 23
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 24
+  Max Mhz: 2200, Current Mhz: 1512, Mhz Limit: 2200
+Processor Information for processor 25
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 26
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 27
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 28
+  Max Mhz: 2200, Current Mhz: 1512, Mhz Limit: 2200
+Processor Information for processor 29
+  Max Mhz: 2200, Current Mhz: 1512, Mhz Limit: 2200
+Processor Information for processor 30
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+Processor Information for processor 31
+  Max Mhz: 2200, Current Mhz: 2200, Mhz Limit: 2200
+
+Memory: 4k page, system-wide physical 16087M (1512M free)
+TotalPageFile size 35931M (AvailPageFile size 232M)
+current process WorkingSet (physical memory assigned to process): 13M, peak: 13M
+current process commit charge ("private bytes"): 91M, peak: 343M
+
+vm_info: OpenJDK 64-Bit Server VM (21.0.6+9-b631.42) for windows-amd64 JRE (21.0.6+9-b631.42), built on 2025-04-08 by "builduser" with MS VC++ 16.10 / 16.11 (VS2019)
+
+END.

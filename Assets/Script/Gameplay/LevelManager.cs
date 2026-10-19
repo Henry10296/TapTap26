@@ -3,18 +3,20 @@ using UnityEngine;
 
 namespace TapCom.Gameplay
 {
-    /// <summary>关卡装载完成事件：Presentation（LevelActorBinder）据此生成表现物。</summary>
+    /// <summary>关卡装载完成事件：Presentation（LevelActorBinder/BackgroundLayerLoader）据此生成表现物。携带源 LevelData（背景层等非 Cell 数据随事件到达）。</summary>
     public readonly struct LevelLoadedEvent
     {
         public readonly string WorldId;
         public readonly WorldGrid World;
         public readonly Vector3Int SpawnPoint;
+        public readonly LevelData Data;
 
-        public LevelLoadedEvent(string worldId, WorldGrid world, Vector3Int spawnPoint)
+        public LevelLoadedEvent(string worldId, WorldGrid world, Vector3Int spawnPoint, LevelData data)
         {
             WorldId = worldId;
             World = world;
             SpawnPoint = spawnPoint;
+            Data = data;
         }
     }
 
@@ -55,6 +57,12 @@ namespace TapCom.Gameplay
         {
             if (_sequence == null || _index >= _sequence.Length) return false;
             var data = _sequence[_index];
+            if (data == null)
+            {
+                // TASK-016：LevelSequence Entries 配了 null 资产时防 NRE（A 线上报）
+                Debug.LogError($"[LevelManager] 关卡序列第 {_index} 项为 null（检查 LevelSequence Entries）");
+                return false;
+            }
             Load(data.name, data);
             return true;
         }
@@ -86,15 +94,15 @@ namespace TapCom.Gameplay
             _game.TrySetState(GameState.TitleScreen);
         }
 
-        /// <summary>装载关卡：清理旧世界 → 纯数据装载 → 发 LevelLoadedEvent → 推进 Playing（装载完成的事实归本类）。</summary>
+        /// <summary>装载关卡：清理旧世界 → 纯数据装载 → 发 LevelLoadedEvent → 推进 Cg（TASK-016：Cg→Playing 归 A 线 UI 在开场演出完成后推进）。</summary>
         public WorldGrid Load(string worldId, LevelData data)
         {
             Unload();
 
             var world = LevelLoader.Load(_worlds, worldId, data);
             CurrentWorldId = worldId;
-            _bus.Publish(new LevelLoadedEvent(worldId, world, data.SpawnPoint));
-            _game.TrySetState(GameState.Playing);
+            _bus.Publish(new LevelLoadedEvent(worldId, world, data.SpawnPoint, data));
+            _game.TrySetState(GameState.Cg); // TASK-016：Cg→Playing 归 A 线 UI 在开场演出完成后推进
             return world;
         }
 

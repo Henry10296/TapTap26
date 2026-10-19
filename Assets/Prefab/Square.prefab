@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 5809347340049829481}
   - component: {fileID: 4677982502005728594}
   - component: {fileID: 5144747530245295501}
-  - component: {fileID: 4644307345617966749}
   m_Layer: 3
   m_Name: Square
   m_TagString: Untagged
@@ -102,10 +101,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 462788258e6ecd94dbdf0cf3991c6373, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _rockSprite: {fileID: 21300000, guid: 40a16f0cdc0a6d8408b3d028b92d2152, type: 3}
-  _blueSprite: {fileID: 21300000, guid: bed65d9e14e542e4f825e9ba8c234902, type: 3}
-  _redSprite: {fileID: 21300000, guid: 9ebafcd86dc20904d8bd83f1f9526437, type: 3}
-  _yellowSprite: {fileID: 21300000, guid: 58c80c6d8d6637e4885bbba865788383, type: 3}
+  _rockSprite: {fileID: 21300000, guid: 99c8cc25dc6bf90488f83a4482eec946, type: 3}
+  _blueSprite: {fileID: 21300000, guid: df9726164a705644dbaf9d5ca8431a65, type: 3}
+  _redSprite: {fileID: 21300000, guid: 54f352a4b2269e14183cd5536f9683eb, type: 3}
+  _yellowSprite: {fileID: 21300000, guid: 5d577c4b06d2abf47ad2f78a5d1cd0ad, type: 3}
+  _bedrockSprite: {fileID: 21300000, guid: 22c2a6be848befc40975e0b9509e030b, type: 3}
 --- !u!61 &5144747530245295501
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -138,7 +138,7 @@ BoxCollider2D:
     m_Bits: 4294967295
   m_IsTrigger: 0
   m_UsedByEffector: 0
-  m_CompositeOperation: 0
+  m_CompositeOperation: 1
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
@@ -152,30 +152,3 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1.28, y: 1.28}
   m_EdgeRadius: 0
---- !u!50 &4644307345617966749
-Rigidbody2D:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4524926157232214977}
-  m_BodyType: 2
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 0
-  m_Constraints: 0

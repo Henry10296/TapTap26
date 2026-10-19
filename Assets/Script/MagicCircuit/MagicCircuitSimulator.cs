@@ -11,6 +11,9 @@ namespace TapCom.MagicCircuit
         public Vector2 Position;
         public Vector2 Velocity;
         public SeedMagicType Type;
+
+        /// <summary>贴合点被占的诊断日志只打一次（防 120Hz 刷屏）。</summary>
+        public bool SnapBlockedLogged;
     }
 
     /// <summary>解锁运动格（已出字典；落定/加固再 AddCell 回字典——Invariant：字典内格恒 Locked）。
@@ -56,6 +59,7 @@ namespace TapCom.MagicCircuit
     /// 固定步 1/120 内部累加器（TickManager 变步长不进模拟）；效果修改一律经本类落地（铁律 #4）。
     /// 触发模型（2026-10-09 拍板）：新落定块为 source、两步邻域 L 形三连、精确色数查 RecipeTable、
     /// 多组随机选一、每组一次（fired 集）、蓄能 0.5s。
+    /// 基岩免疫（TASK-016）：Bedrock 地形格全路径不可动不可消（IsImmovable 闸），且被配方枚举显式排除（无色兜底）。
     /// </summary>
     public class MagicCircuitSimulator : ITickable, IZeroFieldQuery
     {
@@ -98,6 +102,19 @@ namespace TapCom.MagicCircuit
             _worlds = worlds;
             _levels = levels;
             _bus.Subscribe<SeedThrownEvent>(OnSeedThrown);
+            _bus.Subscribe<LevelLoadedEvent>(OnLevelLoaded);
+        }
+
+        /// <summary>关卡装载即清全部上一局模拟状态（2026-10-18 拍板）：_fired 位置键跨关残留会烧掉重开关卡后的
+        /// 同位置配方（「颜色方块不稳定触发」根因）；种子/运动格/魔法场/蓄能同属按关生命周期，一并清。</summary>
+        private void OnLevelLoaded(LevelLoadedEvent e)
+        {
+            _seeds.Clear();
+            _movers.Clear();
+            _fields.Clear();
+            _pending.Clear();
+            _fired.Clear();
+            Debug.Log("[MagicCircuit] level loaded：上一局模拟状态全清（飞行种子/运动格/魔法场/蓄能/已触发登记）");
         }
 
         /// <summary>失重场查询（IZeroFieldQuery；PlayerMotor 漂移判定用）。</summary>
@@ -168,6 +185,7 @@ namespace TapCom.MagicCircuit
             foreach (var cell in world.Cells)
             {
                 if (field.Settled.Contains(cell.Position)) continue;
+                if (IsImmovable(cell)) continue; // 始终固定/基岩（TASK-016）：免疫吸引捕获
                 if ((CellCenter(cell.Position) - field.Center).sqrMagnitude > field.Radius * field.Radius) continue;
                 _snapshotBuffer.Add(cell);
             }
@@ -175,6 +193,7 @@ namespace TapCom.MagicCircuit
             for (var i = 0; i < _snapshotBuffer.Count; i++)
             {
                 var cell = _snapshotBuffer[i];
+                Debug.Log($"[MagicCircuit] attract field captures ({cell.Position.x},{cell.Position.y})（引力场捕获：场内存活期落定即吸走）");
                 Unlock(world, cell.Position, cell.MagicAttr, Vector2.zero, attracted: true);
             }
         }
@@ -197,7 +216,16 @@ namespace TapCom.MagicCircuit
 
                 if (!r.Hit) continue;
                 var target = SnapTarget(r);
-                if (world.IsOccupied(target)) continue; // 贴合面被占：轴向速度已清零，滑停重试（原型反弹的 M1 简化）
+                if (world.IsOccupied(target))
+                {
+                    // 贴合面被占：轴向速度已清零，滑停重试（原型反弹的 M1 简化）；诊断日志每种子一次
+                    if (!seed.SnapBlockedLogged)
+                    {
+                        seed.SnapBlockedLogged = true;
+                        Debug.Log($"[MagicCircuit] seed snap blocked: 贴合点 {target} 被占，种子滑停等待（at {seed.Position}）");
+                    }
+                    continue;
+                }
 
                 world.AddCell(target, CellType.Rock, CellGravityAttr.Dynamic, SeedAttr(seed.Type), locked: true);
                 PublishChanged(CellChangeType.Added, target, SeedAttr(seed.Type));
@@ -290,23 +318,19 @@ namespace TapCom.MagicCircuit
 
             var dir = e.Direction.sqrMagnitude < 1e-6f ? Vector2.right : e.Direction.normalized;
 
-            // 出手口扫描：沿方向推进至阻挡，起点被挡则拒投（原型 throwSeed L1629-1632）
-            Vector2? muzzle = null;
-            for (var d = 0f; d <= MagicParams.MuzzleScanDistance + 1e-4f; d += MagicParams.MuzzleScanStep)
-            {
-                var p = e.Origin + dir * d;
-                if (OverlapsCell(world, p, MagicParams.SeedHitboxHalf)) break;
-                muzzle = p;
-            }
-            if (muzzle == null)
+            // 出手口扫描：沿方向推进至阻挡，起点被挡则拒投（判定共用 Ballistics.TryScanMuzzle，与 PlayerThrower 预检同源）
+            if (!Ballistics.TryScanMuzzle(world, e.Origin, dir, out var muzzle))
             {
                 Debug.Log("[MagicCircuit] throw blocked: muzzle occluded（出手位置被挡，拒投）");
                 return;
             }
 
-            var velocity = dir * MagicParams.ThrowSpeed + new Vector2(e.PlayerVelocity.x * MagicParams.PlayerVxInheritRatio, 0f);
-            _seeds.Add(new SeedProjectile { Position = muzzle.Value, Velocity = velocity, Type = e.Type });
-            Debug.Log($"[MagicCircuit] seed spawned type={e.Type} at {muzzle.Value} vel={velocity}");
+            // 弹道解算穿过指针点（2026-10-13「弹道终于指针」：固定速度解低弧角，超射程抬速），预览同源（TrajectoryPreview）
+            // TASK-016：速度取事件携带值（PlayerThrower 序列化字段），<=0 回退常量兼容旧发布方
+            var velocity = Ballistics.SolveThrowVelocity(muzzle, e.Target, dir, e.Speed > 0f ? e.Speed : MagicParams.ThrowSpeed)
+                + new Vector2(e.PlayerVelocity.x * MagicParams.PlayerVxInheritRatio, 0f);
+            _seeds.Add(new SeedProjectile { Position = muzzle, Velocity = velocity, Type = e.Type });
+            Debug.Log($"[MagicCircuit] seed spawned type={e.Type} at {muzzle} vel={velocity}");
         }
 
         // —— 三连配方 ——
@@ -318,6 +342,7 @@ namespace TapCom.MagicCircuit
             foreach (var cell in world.Cells)
             {
                 if (cell.MagicAttr == CellMagicAttr.None) continue;
+                if (cell.Type == CellType.Bedrock) continue; // 基岩无色不触发配方（TASK-016；误配彩色也兜底排除）
                 _snapshotBuffer.Add(cell);
             }
             if (_snapshotBuffer.Count == 0) return;
@@ -385,7 +410,7 @@ namespace TapCom.MagicCircuit
                 }
                 Debug.Log($"[MagicCircuit] cast blast：三块消失，弹飞 {_snapshotBuffer.Count} 格（r={MagicParams.BlastRadius}格）");
             }
-            else
+            else if (spell == SpellType.Attract)
             {
                 var field = new MagicField { Type = SpellType.Attract, Center = center, Radius = MagicParams.AttractRadius, Remaining = MagicParams.FieldDuration };
                 foreach (var pos in tri) field.Settled.Add(pos);
@@ -399,19 +424,52 @@ namespace TapCom.MagicCircuit
                 foreach (var cell in _snapshotBuffer) Unlock(world, cell.Position, cell.MagicAttr, Vector2.zero, attracted: true);
                 _fields.Add(field);
                 Debug.Log($"[MagicCircuit] cast attract：锚团 {tri.Length} 块，捕获 {_snapshotBuffer.Count} 格（r={MagicParams.AttractRadius}格 {MagicParams.FieldDuration}s）");
+
+                // GDD 引力配方：三块不销毁、消除颜色（转为岩石方块），保留作吸附锚团
+                foreach (var pos in tri)
+                {
+                    if (!world.TryGetCell(pos, out var cell)) continue;
+                    cell.MagicAttr = CellMagicAttr.None;
+                    PublishChanged(CellChangeType.Changed, pos, cell.MagicAttr);
+                }
+            }
+            else if (spell == SpellType.Static)
+            {
+                // 静止配方（2026-10-18 拍板改版）：变化直径内全部格子原地转为基岩（含触发三块）。
+                // 地形语义全走既有 Bedrock 闸：免疫解锁/消除/吸引（IsImmovable），无色不再参与配方（EvaluateRecipes 排除）。
+                // 已固化/基岩跳过：幂等；构造外转基岩须手动补 Frozen（Cell 构造只在 new 时置位）。
+                _snapshotBuffer.Clear();
+                foreach (var cell in world.Cells)
+                {
+                    if (IsImmovable(cell)) continue;
+                    if ((CellCenter(cell.Position) - center).sqrMagnitude <= MagicParams.StaticRadius * MagicParams.StaticRadius)
+                        _snapshotBuffer.Add(cell);
+                }
+                foreach (var cell in _snapshotBuffer)
+                {
+                    cell.Type = CellType.Bedrock;
+                    cell.MagicAttr = CellMagicAttr.None;
+                    cell.Frozen = true;
+                    PublishChanged(CellChangeType.Changed, cell.Position, cell.MagicAttr, cellType: cell.Type);
+                }
+                Debug.Log($"[MagicCircuit] cast static：{_snapshotBuffer.Count} 格转为基岩（r={MagicParams.StaticRadius}格）");
             }
         }
 
         // —— 解锁 / 加固 ——
 
+        /// <summary>不可动判定（TASK-016）：Frozen（静止魔法固化）或 Bedrock（基岩地形，构造即 Frozen——
+        /// 这里按类型再兜一道，防数据被误改后基岩仍保持免疫）。</summary>
+        private static bool IsImmovable(Cell cell) => cell.Frozen || cell.Type == CellType.Bedrock;
+
         /// <summary>解锁 = 出字典进运动列表（tech-spec §4 规则 6；Invariant：字典内格恒 Locked）。
-        /// 始终固定（Frozen，静止魔法）的格子免疫解锁。</summary>
+        /// 始终固定（Frozen，静止魔法）与基岩（Bedrock，TASK-016）免疫解锁。</summary>
         private void Unlock(WorldGrid world, Vector3Int pos, CellMagicAttr magic, Vector2 velocity, bool attracted)
         {
             if (!world.TryGetCell(pos, out var cell)) return;
-            if (cell.Frozen)
+            if (IsImmovable(cell))
             {
-                Debug.Log($"[MagicCircuit] cell frozen, unlock ignored ({pos.x},{pos.y})");
+                Debug.Log($"[MagicCircuit] cell frozen/bedrock, unlock ignored ({pos.x},{pos.y})");
                 return;
             }
             if (!world.RemoveCell(pos)) return;
@@ -433,6 +491,11 @@ namespace TapCom.MagicCircuit
         private void RemoveDictCell(WorldGrid world, Vector3Int pos)
         {
             if (!world.TryGetCell(pos, out var cell)) return;
+            if (IsImmovable(cell))
+            {
+                Debug.Log($"[MagicCircuit] cell frozen/bedrock, remove ignored ({pos.x},{pos.y})");
+                return;
+            }
             var attr = cell.MagicAttr;
             world.RemoveCell(pos);
             PublishChanged(CellChangeType.Removed, pos, attr);
@@ -549,9 +612,9 @@ namespace TapCom.MagicCircuit
             _ => CellMagicAttr.None,
         };
 
-        private void PublishChanged(CellChangeType type, Vector3Int pos, CellMagicAttr attr, int moverId = 0)
+        private void PublishChanged(CellChangeType type, Vector3Int pos, CellMagicAttr attr, int moverId = 0, CellType cellType = CellType.Rock)
         {
-            _bus.Publish(new CellWorldChangedEvent { Type = type, Position = pos, Attr = attr, MoverId = moverId });
+            _bus.Publish(new CellWorldChangedEvent { Type = type, Position = pos, Attr = attr, MoverId = moverId, CellType = cellType });
         }
     }
 }

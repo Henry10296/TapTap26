@@ -1,5 +1,6 @@
 using TapCom.Gameplay;
 using TapCom.MagicCircuit;
+using TapCom.Presentation;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -58,7 +59,10 @@ namespace TapCom.Core
             services.Register<IZeroFieldQuery>(simulator);
             _tick.Register(simulator);
 
-            Debug.Log("[Core] services ready: ServiceContainer, EventBus, TickManager, GameManager, WorldManager, LevelManager, MagicCircuitSimulator, SceneFlow");
+            // TASK-013：音频模块（订阅游戏事件 → AudioCatalog 映射 → Wwise 后端播声；bank 加载归后端首播前自动完成）
+            services.Register(new AudioManager(bus, new WwiseAudioBackend()));
+
+            Debug.Log("[Core] services ready: ServiceContainer, EventBus, TickManager, GameManager, WorldManager, LevelManager, MagicCircuitSimulator, AudioManager, SceneFlow");
 
             // 启动到标题界面（TASK-008）；「开始游戏」按钮 → Loading（LevelBootstrap 装载完转 Playing）。真实关卡装载 M3 归 LevelManager。
             _game.TrySetState(GameState.TitleScreen);

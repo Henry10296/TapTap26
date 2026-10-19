@@ -3,10 +3,14 @@ using UnityEngine;
 
 namespace TapCom.Gameplay
 {
-    /// <summary>Cell 类型（M1 单类型；加类型 = 填枚举 + 数据行，tech-spec §10 #3）。</summary>
+    /// <summary>Cell 类型（M1 单类型；加类型 = 填枚举 + 数据行，tech-spec §10 #3）。
+    /// 取值只增不改位（追加到尾部）：已序列化资产按数值索引映射，插入中间会错位。</summary>
     public enum CellType
     {
         Rock,
+
+        /// <summary>基岩（TASK-016）：全魔法免疫的固定地形格——不参与反应、无颜色不触发配方；种子可贴其面落格（地形语义）。</summary>
+        Bedrock,
     }
 
     /// <summary>重力属性（静态规则）：能否被重力效果解锁（TASK-002 Q5 拍板）。</summary>
@@ -45,6 +49,7 @@ namespace TapCom.Gameplay
     /// <summary>
     /// 纯数据单元（tech-spec §3）：不是 GameObject，无表现、无物理（铁律 #1/#2）。
     /// 「字典」落在 WorldGrid 的格点字典；本类用强类型字段（可编译期检查、可调试）。
+    /// TASK-016：Bedrock 构造即 Frozen=true（基岩=纯地形），复用静止魔法的免疫闸，编辑器无法误配出可动基岩。
     /// </summary>
     public sealed class Cell
     {
@@ -79,6 +84,9 @@ namespace TapCom.Gameplay
             Locked = locked;
             State = CellState.Normal;
             MagicState = CellMagicState.None;
+            // 基岩=纯地形（TASK-016）：构造即固化。WorldGrid.AddCell 是全库唯一 new Cell 入口
+            //（LevelLoader 初始装载必经），在此收口 = 「编辑器画出基岩 → 导出 → 装载即免疫」，无误配路径。
+            Frozen = type == CellType.Bedrock;
         }
     }
 }

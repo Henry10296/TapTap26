@@ -52,11 +52,13 @@ namespace TapCom.Presentation
 
         private void OnStartClicked()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click
             Services.Container.Get<GameManager>().TrySetState(GameState.Loading);
         }
 
         private void OnQuitClicked()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else

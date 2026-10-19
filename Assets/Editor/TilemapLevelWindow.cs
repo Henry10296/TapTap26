@@ -35,9 +35,11 @@ namespace TapCom.EditorTools
                 "用法：①「场景关卡化」铺 Tilemap → ② Window > 2D > Tile Palette 建 Palette，" +
                 "把 CellTile 资产（Create > 魔法回路 > CellTile）拖进去当笔刷 → ③画关卡 → ④「导出 LevelData」。\n" +
                 "笔刷的格子自带 Cell 定义（在 CellTile 资产 Inspector 里配），导出按数据读，不看名字。\n" +
-                "出生点：用 SpawnTile 笔刷（Create > 魔法回路 > SpawnTile）画一格，导出记入 SpawnPoint。", MessageType.Info);
+                "出生点：用 SpawnTile 笔刷（Create > 魔法回路 > SpawnTile）画一格，导出记入 SpawnPoint。\n" +
+                "终点：用 EndTile 笔刷（Create > 魔法回路 > EndTile）画一格，导出记入 GoalPoint（多格取最后一个）。", MessageType.Info);
 
             if (GUILayout.Button("① 场景关卡化（Grid + Tilemap）")) SceneSetup();
+            if (GUILayout.Button("①b 加背景层（Background_N）")) AddBackgroundLayer();
             if (GUILayout.Button("② 导出 LevelData")) ExportLevelData();
             if (GUILayout.Button("③ 编辑器预览装载")) PreviewLoad();
         }
@@ -60,6 +62,28 @@ namespace TapCom.EditorTools
             Debug.Log("[TilemapLevel] 场景已关卡化：用 Palette 笔刷在 Cells 上画 CellTile", _tilemap);
         }
 
+        /// <summary>加一层背景 Tilemap（TASK-015）：Background_N 命名，sortingOrder 递减（越晚加越远）；Palette 拖普通 Tile 当笔刷。</summary>
+        private void AddBackgroundLayer()
+        {
+            var grid = _tilemap != null && _tilemap.transform.parent != null
+                ? _tilemap.transform.parent
+                : GameObject.Find("LevelGrid")?.transform;
+            if (grid == null)
+            {
+                Debug.LogError("[TilemapLevel] 找不到 LevelGrid（先「场景关卡化」）");
+                return;
+            }
+
+            var n = 0;
+            foreach (Transform child in grid)
+                if (child.name.StartsWith("Background_")) n++;
+
+            var go = new GameObject($"Background_{n}", typeof(Tilemap), typeof(TilemapRenderer));
+            go.transform.SetParent(grid, false);
+            go.GetComponent<TilemapRenderer>().sortingOrder = -(n + 1); // Cells 表现为 0，背景依次向远排
+            Debug.Log($"[TilemapLevel] 已加 {go.name}（sortingOrder={-(n + 1)}）：Palette 拖普通 Tile 资产当背景笔刷，画完「导出 LevelData」", go);
+        }
+
         /// <summary>导出：读每个笔刷 CellTile 自带的格子定义 → LevelData 资产（Assets/Levels/）。</summary>
         private void ExportLevelData()
         {
@@ -73,6 +97,19 @@ namespace TapCom.EditorTools
             _foreignCount = 0;
             Vector3Int? spawnPos = null;
             var spawnCount = 0;
+            Vector3Int? goalPos = null;
+            var goalCount = 0;
+            var hasUsed = false; // TASK-016：GridBounds = 已用格（cells+spawn+goal）并集
+            var bmin = Vector3Int.zero;
+            var bmax = Vector3Int.zero;
+
+            void Enclose(Vector3Int p)
+            {
+                if (!hasUsed) { bmin = p; bmax = p; hasUsed = true; return; }
+                bmin = Vector3Int.Min(bmin, p);
+                bmax = Vector3Int.Max(bmax, p);
+            }
+
             foreach (var pos in _tilemap.cellBounds.allPositionsWithin)
             {
                 var tile = _tilemap.GetTile(pos);
@@ -81,6 +118,14 @@ namespace TapCom.EditorTools
                 {
                     spawnCount++;
                     spawnPos ??= pos; // 多个时取第一个
+                    Enclose(pos);
+                    continue;
+                }
+                if (tile is EndTile)
+                {
+                    goalCount++;
+                    goalPos = pos; // TASK-016：多格画了取最后一个（警告在导出后）
+                    Enclose(pos);
                     continue;
                 }
                 if (tile is CellTile cellTile)
@@ -92,7 +137,9 @@ namespace TapCom.EditorTools
                         Gravity = cellTile.gravity,
                         Magic = cellTile.magic,
                         Locked = true, // 世界默认冻结（铁律 #9）
+                        Sprite = cellTile.sprite, // 本格贴图（2026-10-17：笔刷 Sprite 直传；null 时运行时回退属性槽位）
                     });
+                    Enclose(pos);
                 }
                 else
                 {
@@ -117,6 +164,9 @@ namespace TapCom.EditorTools
             }
             data.Cells = defs;
             data.SpawnPoint = spawnPos ?? Vector3Int.zero;
+            data.GoalPoint = goalPos ?? Vector3Int.zero; // TASK-016：(0,0,0) = 本关无终点
+            data.GridBounds = hasUsed ? new BoundsInt(bmin, bmax - bmin + Vector3Int.one) : new BoundsInt(); // TASK-016：已用格并集
+            data.BackgroundLayers = ExportBackgroundLayers(_tilemap.transform.parent);
             EditorUtility.SetDirty(data);
             AssetDatabase.SaveAssets();
 
@@ -125,8 +175,46 @@ namespace TapCom.EditorTools
             else if (spawnCount > 1)
                 Debug.LogWarning($"[TilemapLevel] 出生点画了 {spawnCount} 个，取第一个 {spawnPos.Value}");
 
+            if (goalCount > 1) // TASK-016：多终点取最后一个并警告（0 个合法 = 无终点）
+                Debug.LogWarning($"[TilemapLevel] 终点画了 {goalCount} 个，取最后一个 {goalPos.Value}");
+
             var warn = _foreignCount > 0 ? $"（跳过非 CellTile {_foreignCount} 个）" : "";
-            Debug.Log($"[TilemapLevel] exported: {path}，{defs.Count} defs，spawn={data.SpawnPoint}{warn}", data);
+            Debug.Log($"[TilemapLevel] exported: {path}，{defs.Count} defs，spawn={data.SpawnPoint}，goal={data.GoalPoint}，bounds={data.GridBounds.min}~{data.GridBounds.max}，背景 {data.BackgroundLayers.Count} 层{warn}", data);
+        }
+
+        /// <summary>导出背景层（TASK-015）：读 LevelGrid 下所有 Background_* Tilemap → BackgroundLayerDef（Tile 引用直存，运行时 SetTile 重建）。</summary>
+        private static List<BackgroundLayerDef> ExportBackgroundLayers(Transform gridRoot)
+        {
+            var layers = new List<BackgroundLayerDef>();
+            if (gridRoot == null) return layers;
+
+            var maps = new List<Tilemap>();
+            foreach (Transform child in gridRoot)
+                if (child.name.StartsWith("Background_"))
+                {
+                    var tm = child.GetComponent<Tilemap>();
+                    if (tm != null) maps.Add(tm);
+                }
+            maps.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+
+            foreach (var tm in maps)
+            {
+                var renderer = tm.GetComponent<TilemapRenderer>();
+                var layer = new BackgroundLayerDef
+                {
+                    Name = tm.name,
+                    SortingOrder = renderer != null ? renderer.sortingOrder : 0,
+                    Tiles = new List<BackgroundTileDef>(),
+                };
+                foreach (var pos in tm.cellBounds.allPositionsWithin)
+                {
+                    var tile = tm.GetTile(pos);
+                    if (tile == null) continue;
+                    layer.Tiles.Add(new BackgroundTileDef { Pos = pos, Tile = tile });
+                }
+                if (layer.Tiles.Count > 0) layers.Add(layer);
+            }
+            return layers;
         }
 
         /// <summary>编辑器内预览装载：LevelData → WorldGrid + CellActor，自证整条转换链。</summary>

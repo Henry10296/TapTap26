@@ -7,7 +7,7 @@ using UnityEngine;
 namespace TapCom.Presentation
 {
     /// <summary>
-    /// M1 动态表现（TASK-007 §8 第 9 步）：字典格=CellActor 实例、飞行种子=小图、运动格=格子图、蓄能组=白图高亮。
+    /// M1 动态表现（TASK-007 §8 第 9 步）：字典格=CellActor 实例、飞行种子=小图、运动格=格子图、蓄能组=本体颜色闪烁。
     /// 离散变化订阅 CellWorldChangedEvent；持续运动每帧拉模拟器快照（不逐步发事件）。
     /// 落定格实例化 CellActor 预制体并放进 CompositeCollider2D 宿主层级（_cellParent 拖 LevelActorBinder 物体），
     /// 与关卡初始格同款贴图与碰撞——投掷落格=正式岩石格（数据层落定即 Locked，铁律 #9）。只读模拟器与事件，绝不回写（铁律 #2/#6）。
@@ -23,11 +23,20 @@ namespace TapCom.Presentation
         [SerializeField] private Sprite _redSprite;
         [SerializeField] private Sprite _yellowSprite;
 
+        [Header("蓄能闪烁（2026-10-17 拍板：不盖图，方块本体颜色脉动）")]
+        [SerializeField] private Color _flashColor = new Color(1f, 0.85f, 0.3f); // 峰值色（白⇄峰值往返脉动）
+        [SerializeField] private float _flashPeriod = 0.4f;                      // 闪烁周期（秒，白⇄峰值一个来回）
+
         private readonly Dictionary<Vector3Int, CellActor> _cellViews = new Dictionary<Vector3Int, CellActor>();
+        private readonly Dictionary<int, CellActor> _moverActors = new Dictionary<int, CellActor>(); // 运动格本体：同一 CellActor 从静止视图转入运动视图（不换皮）
         private readonly List<GameObject> _seedViews = new List<GameObject>();
-        private readonly List<GameObject> _moverViews = new List<GameObject>();
-        private readonly Dictionary<Vector3Int, GameObject> _chargeViews = new Dictionary<Vector3Int, GameObject>();
+        private readonly Dictionary<Vector3Int, SpriteRenderer> _flashing = new Dictionary<Vector3Int, SpriteRenderer>(); // 蓄能闪烁中的本体渲染器
+        private readonly HashSet<Vector3Int> _flashSet = new HashSet<Vector3Int>(); // 本帧蓄能格集合（对账基准）
+        private readonly List<Vector3Int> _staleFlash = new List<Vector3Int>();     // 退出闪烁的格子（先收集后清，防遍历中改容器）
+        private float _flashTime;
+        private readonly HashSet<int> _staleIds = new HashSet<int>();
         private MagicCircuitSimulator _simulator;
+        private LevelActorBinder _binder;
         private Sprite _square;
         private bool _prefabWarned;
         private bool _spriteWarned;
@@ -39,6 +48,8 @@ namespace TapCom.Presentation
 
             if (Services.Container.TryGet(out MagicCircuitSimulator simulator)) _simulator = simulator;
             else Debug.LogWarning("[CircuitView] 模拟器未注册（Core 未装配 MagicCircuitSimulator）", this);
+
+            _binder = FindFirstObjectByType<LevelActorBinder>();
 
             // 初始关卡表现归 LevelActorBinder（LevelLoadedEvent 驱动）；本类只管模拟器动态增删的格子，防双渲染
             Services.EventBus.Subscribe<CellWorldChangedEvent>(OnCellChanged);
@@ -57,20 +68,49 @@ namespace TapCom.Presentation
         {
             foreach (var view in _cellViews.Values) Destroy(view.gameObject);
             _cellViews.Clear();
-            foreach (var view in _chargeViews.Values) Destroy(view);
-            _chargeViews.Clear();
+            foreach (var view in _moverActors.Values) Destroy(view.gameObject);
+            _moverActors.Clear();
+            foreach (var r in _flashing.Values) if (r != null) r.color = Color.white; // 闪烁复位（本体多半随重建消失，保险）
+            _flashing.Clear();
         }
 
         private void OnCellChanged(CellWorldChangedEvent e)
         {
-            if (e.Type == CellChangeType.Added)
+            switch (e.Type)
             {
-                if (!_cellViews.ContainsKey(e.Position)) CreateCellView(e.Position, e.Attr);
-            }
-            else
-            {
-                if (_cellViews.TryGetValue(e.Position, out var view)) Destroy(view.gameObject);
-                _cellViews.Remove(e.Position);
+                case CellChangeType.Added:
+                    if (!_cellViews.ContainsKey(e.Position)) CreateCellView(e.Position, e.Attr);
+                    break;
+
+                case CellChangeType.Removed:
+                    // 动态格（种子落的）：本体在自己字典里
+                    if (_cellViews.TryGetValue(e.Position, out var actor))
+                    {
+                        _cellViews.Remove(e.Position);
+                        if (e.MoverId != 0)
+                        {
+                            actor.transform.SetParent(transform, false);
+                            _moverActors[e.MoverId] = actor;
+                        }
+                        else
+                        {
+                            Destroy(actor.gameObject);
+                        }
+                        break;
+                    }
+
+                    // 初始格（LevelActorBinder 生成）：取走本体转运动视图——否则贴图滞留原地而数据飞走（双影 bug）
+                    if (e.MoverId != 0 && _binder != null && _binder.TryTake(e.Position, out var taken))
+                    {
+                        taken.transform.SetParent(transform, false);
+                        _moverActors[e.MoverId] = taken;
+                    }
+                    break;
+
+                case CellChangeType.Changed:
+                    // 原位属性变化（引力转岩石/静止转基岩）：重新 Bind 换贴图（格类型随事件到达，2026-10-18）
+                    if (_cellViews.TryGetValue(e.Position, out var changed)) changed.Bind(e.Position, e.Attr, e.CellType);
+                    break;
             }
         }
 
@@ -96,34 +136,73 @@ namespace TapCom.Presentation
             }
         }
 
+        /// <summary>运动格本体驱动：按 MoverId 对账（落定/出界的 Id 自动销毁其本体——落定处 Added 已生成新静止格）。</summary>
         private void SyncMovers()
         {
             var movers = _simulator.MovingCells;
-            while (_moverViews.Count < movers.Count) _moverViews.Add(NewSquare(Vector3.one, _square));
-            for (var i = 0; i < _moverViews.Count; i++)
+
+            // 清理已消失 Id（落定/出界）
+            _staleIds.Clear();
+            foreach (var id in _moverActors.Keys) _staleIds.Add(id);
+            foreach (var mover in movers) _staleIds.Remove(mover.Id);
+            foreach (var id in _staleIds)
             {
-                var active = i < movers.Count;
-                _moverViews[i].SetActive(active);
-                if (!active) continue;
-                _moverViews[i].transform.position = new Vector3(movers[i].Position.x, movers[i].Position.y, 0f);
-                _moverViews[i].GetComponent<SpriteRenderer>().sprite = AttrSprite(movers[i].Magic);
+                if (_moverActors.TryGetValue(id, out var stale) && stale != null) Destroy(stale.gameObject);
+                _moverActors.Remove(id);
+            }
+
+            // 本体跟随：无本体时兜底实例化（理论必有 Removed 先行转交）
+            foreach (var mover in movers)
+            {
+                if (!_moverActors.TryGetValue(mover.Id, out var actor) || actor == null)
+                {
+                    if (_cellPrefab == null) continue;
+                    actor = Instantiate(_cellPrefab, transform);
+                    actor.Bind(default, mover.Magic);
+                    _moverActors[mover.Id] = actor;
+                }
+                actor.transform.position = new Vector3(mover.Position.x, mover.Position.y, 0f);
             }
         }
 
+        /// <summary>蓄能闪烁（2026-10-17 拍板：不盖图）：按本帧 PendingCasts 对账，
+        /// 新进格子找本体开闪、退出格子复位 Color.white（CellActor 从不写 color，white 即原始态）。</summary>
         private void SyncCharges()
         {
-            foreach (var view in _chargeViews.Values) view.SetActive(false);
+            _flashTime += Time.deltaTime;
+            _flashSet.Clear();
             foreach (var pending in _simulator.PendingCasts)
             foreach (var pos in pending.Cells)
-            {
-                if (!_chargeViews.TryGetValue(pos, out var view))
+                _flashSet.Add(pos);
+
+            foreach (var pos in _flashSet)
+                if (!_flashing.ContainsKey(pos))
                 {
-                    view = NewSquare(Vector3.one * 0.94f, _square);
-                    _chargeViews[pos] = view;
+                    var renderer = RendererAt(pos);
+                    if (renderer != null) _flashing[pos] = renderer;
                 }
-                view.SetActive(true);
-                view.transform.position = new Vector3(pos.x + 0.5f, pos.y + 0.5f, 0f);
+
+            _staleFlash.Clear();
+            foreach (var kv in _flashing)
+                if (!_flashSet.Contains(kv.Key) || kv.Value == null) _staleFlash.Add(kv.Key);
+            foreach (var pos in _staleFlash)
+            {
+                if (_flashing.TryGetValue(pos, out var stale) && stale != null) stale.color = Color.white;
+                _flashing.Remove(pos);
             }
+
+            // 白⇄峰值色正弦脉动
+            var t = 0.5f + 0.5f * Mathf.Sin(_flashTime * Mathf.PI * 2f / Mathf.Max(_flashPeriod, 0.01f));
+            foreach (var r in _flashing.Values)
+                if (r != null) r.color = Color.Lerp(Color.white, _flashColor, t);
+        }
+
+        /// <summary>按格位找方块本体渲染器：动态格在 _cellViews，初始格查 binder（TryGet 只读）。</summary>
+        private SpriteRenderer RendererAt(Vector3Int pos)
+        {
+            if (_cellViews.TryGetValue(pos, out var actor)) return actor.GetComponent<SpriteRenderer>();
+            if (_binder != null && _binder.TryGet(pos, out var binderActor)) return binderActor.GetComponent<SpriteRenderer>();
+            return null;
         }
 
         /// <summary>落定格 = CellActor 实例（贴图+碰撞），放进 _cellParent 层级被 CompositeCollider2D 收编。</summary>
@@ -144,13 +223,14 @@ namespace TapCom.Presentation
             _cellViews[pos] = actor;
         }
 
-        private GameObject NewSquare(Vector3 scale, Sprite sprite)
+        private GameObject NewSquare(Vector3 scale, Sprite sprite, int sortingOrder = 0)
         {
             var go = new GameObject("cell-view");
             go.transform.SetParent(transform, false);
             go.transform.localScale = scale;
             var renderer = go.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite != null ? sprite : _square;
+            renderer.sortingOrder = sortingOrder;
             return go;
         }
 
@@ -159,14 +239,6 @@ namespace TapCom.Presentation
             SeedMagicType.Blue => WarnedSprite(_blueSprite, "Blue"),
             SeedMagicType.Red => WarnedSprite(_redSprite, "Red"),
             _ => WarnedSprite(_yellowSprite, "Yellow"),
-        };
-
-        private Sprite AttrSprite(CellMagicAttr attr) => attr switch
-        {
-            CellMagicAttr.Blue => WarnedSprite(_blueSprite, "Blue"),
-            CellMagicAttr.Red => WarnedSprite(_redSprite, "Red"),
-            CellMagicAttr.Yellow => WarnedSprite(_yellowSprite, "Yellow"),
-            _ => _square,
         };
 
         /// <summary>贴图槽没拖：一次性告警并回退白图（不中断）。</summary>
