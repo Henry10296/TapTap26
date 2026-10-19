@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TapCom.Core;
+using TapCom.Gameplay;
 
 namespace TapCom.Presentation
 {
@@ -66,6 +67,11 @@ namespace TapCom.Presentation
         public const string SwitchGroupStatus = "Status";
 
         public const string SwitchCalm = "status_Switch";
+
+        public const string SwitchTense = "Badly_status";
+
+        /// <summary>紧张关 = 第四关（0 基 index 3；2026-10-19 用户需求：1-3 关单层 music1、第四关 music1+music2 叠层）。加关后紧张关变化改这里。</summary>
+        public const int TenseLevelIndex = 3;
 
         public static string For(in SeedThrownEvent evt) => SeedThrow;
 
@@ -150,6 +156,9 @@ namespace TapCom.Presentation
         /// <summary>同类石头声上次发声时刻（Environment.TickCount ms；int 回绕下 unchecked 减法安全）。</summary>
         private readonly Dictionary<string, int> _lastRockPlayMs = new Dictionary<string, int>();
 
+        /// <summary>最近 LevelLoadedEvent 的关卡序号 0 基（Load 先于 Cg→Playing，进场设 Status 开关时已就绪）。</summary>
+        private int _levelIndex;
+
         public AudioManager(EventBus bus, IAudioBackend backend)
         {
             _backend = backend;
@@ -166,6 +175,7 @@ namespace TapCom.Presentation
             bus.Subscribe<VictoryTriggeredEvent>(OnVictoryTriggered);
             bus.Subscribe<PlayerAimChangedEvent>(OnPlayerAimChanged);
             bus.Subscribe<UiClickedEvent>(OnUiClicked);
+            bus.Subscribe<LevelLoadedEvent>(OnLevelLoaded);
         }
 
         private void OnSeedThrown(SeedThrownEvent evt) => PlayMapped(AudioCatalog.For(evt));
@@ -177,12 +187,22 @@ namespace TapCom.Presentation
             PlayMapped(AudioCatalog.SpellConfirm);
         }
 
-        /// <summary>状态变化多音并发：Switch 重置 + BGM + 环境底噪 + 重开音各自独立判定（null 跳过）。</summary>
+        /// <summary>记关卡序号（LevelManager.Load 先于 Cg→Playing 发布，进场设开关时已就绪）。</summary>
+        private void OnLevelLoaded(LevelLoadedEvent evt) => _levelIndex = evt.LevelIndex;
+
+        /// <summary>状态变化多音并发：Status 开关 + BGM + 环境底噪 + 重开音各自独立判定（null 跳过）。</summary>
         private void OnStateChanged(GameStateChangedEvent evt)
         {
             if (evt.To == GameState.Playing)
             {
-                // 进关卡/重开一律先回平静层再起 BGM（2026-10-19 用户需求：紧张层不跨局残留；须先于 Play 生效）。
+                // 进关卡/重开先定 Status 层再起 BGM（2026-10-19 用户需求：1-3 关平静单层 music1、第四关紧张叠层 music1+music2；
+                // 开关值与音乐层的对应关系在 Wwise music 决策侧，须先于 Play 生效）。
+                var switchValue = _levelIndex == AudioCatalog.TenseLevelIndex ? AudioCatalog.SwitchTense : AudioCatalog.SwitchCalm;
+                _backend.SetSwitch(AudioCatalog.SwitchGroupStatus, switchValue);
+            }
+            else if (evt.To == GameState.TitleScreen)
+            {
+                // 回标题回平静（防第四关退出后标题残留紧张层；首启该发早于引擎初始化会落空，无害）。
                 _backend.SetSwitch(AudioCatalog.SwitchGroupStatus, AudioCatalog.SwitchCalm);
             }
 

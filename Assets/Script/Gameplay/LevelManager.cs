@@ -3,20 +3,23 @@ using UnityEngine;
 
 namespace TapCom.Gameplay
 {
-    /// <summary>关卡装载完成事件：Presentation（LevelActorBinder/BackgroundLayerLoader）据此生成表现物。携带源 LevelData（背景层等非 Cell 数据随事件到达）。</summary>
+    /// <summary>关卡装载完成事件：Presentation（LevelActorBinder/BackgroundLayerLoader）据此生成表现物。携带源 LevelData（背景层等非 Cell 数据随事件到达）。
+    /// LevelIndex = 关卡序列序号 0 基（2026-10-19 音频按关设 Status 开关用：第四关=index 3 紧张层）。</summary>
     public readonly struct LevelLoadedEvent
     {
         public readonly string WorldId;
         public readonly WorldGrid World;
         public readonly Vector3Int SpawnPoint;
         public readonly LevelData Data;
+        public readonly int LevelIndex;
 
-        public LevelLoadedEvent(string worldId, WorldGrid world, Vector3Int spawnPoint, LevelData data)
+        public LevelLoadedEvent(string worldId, WorldGrid world, Vector3Int spawnPoint, LevelData data, int levelIndex)
         {
             WorldId = worldId;
             World = world;
             SpawnPoint = spawnPoint;
             Data = data;
+            LevelIndex = levelIndex;
         }
     }
 
@@ -101,7 +104,7 @@ namespace TapCom.Gameplay
 
             var world = LevelLoader.Load(_worlds, worldId, data);
             CurrentWorldId = worldId;
-            _bus.Publish(new LevelLoadedEvent(worldId, world, data.SpawnPoint, data));
+            _bus.Publish(new LevelLoadedEvent(worldId, world, data.SpawnPoint, data, _index));
             _game.TrySetState(GameState.Cg); // TASK-016：Cg→Playing 归 A 线 UI 在开场演出完成后推进
             return world;
         }
