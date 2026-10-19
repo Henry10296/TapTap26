@@ -102,12 +102,14 @@ namespace TapCom.Presentation
         /// <summary>下一关（Victory→Loading 边已有；最后一关 Advance 自动回标题）。</summary>
         public void NextLevel()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click
             Services.Container.Get<LevelManager>().Advance();
         }
 
         /// <summary>重开当前关（Victory/Defeat→Loading 边已有；2026-10-17 扩展，接 ReSetButton）。</summary>
         public void ResetLevel()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click
             Services.Container.Get<LevelManager>().Reload();
         }
     }

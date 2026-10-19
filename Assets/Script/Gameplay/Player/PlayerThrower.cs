@@ -67,17 +67,25 @@ namespace TapCom.Gameplay
             if (_game == null) _game = Services.Container.Get<GameManager>();
             if (_game.Current != GameState.Playing)
             {
+                if (_wasAiming)
+                {
+                    _wasAiming = false;
+                    Services.EventBus.Publish(new PlayerAimChangedEvent { Aiming = false }); // 暂停/CG 时停蓄力循环音
+                }
                 _lastNonPlayingFrame = Time.frameCount;
                 return;
             }
             if (Time.frameCount == _lastNonPlayingFrame + 1) return;
 
+            // 瞄准沿统一检测（音频钩子 + 随机模式重掷共用）：按下/松开各一次
+            var aiming = reader.AimHeld;
+            var aimToggled = aiming != _wasAiming;
+            _wasAiming = aiming;
+
             if (_randomSeedType)
             {
-                // 调试旁路：进入瞄准（右键按下沿）掷定本次种子；显示与投出同源
-                var aiming = reader.AimHeld;
-                if (aiming && !_wasAiming) RollSeedType();
-                _wasAiming = aiming;
+                // 调试旁路：进入瞄准掷定本次种子；显示与投出同源
+                if (aiming && aimToggled) RollSeedType();
             }
             else
             {
@@ -88,6 +96,9 @@ namespace TapCom.Gameplay
                 else if (Mathf.Abs(reader.SeedScrollDelta) > 1e-3f)
                     CycleSeedType(reader.SeedScrollDelta > 0f ? 1 : -1);
             }
+
+            if (aimToggled)
+                Services.EventBus.Publish(new PlayerAimChangedEvent { Aiming = aiming });
 
             if (!reader.ThrowPressed) return;
 
@@ -163,6 +174,15 @@ namespace TapCom.Gameplay
             if (index < 0) index = 0;
             index = (index + delta % SeedTypes.Length + SeedTypes.Length) % SeedTypes.Length;
             SetSeedType(SeedTypes[index]);
+        }
+
+        private void OnDisable()
+        {
+            if (_wasAiming)
+            {
+                _wasAiming = false;
+                Services.EventBus.Publish(new PlayerAimChangedEvent { Aiming = false }); // 销毁/禁用时停蓄力循环音
+            }
         }
 
         private bool TryGetWorld(out WorldGrid world)

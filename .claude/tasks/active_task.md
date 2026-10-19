@@ -3,7 +3,7 @@
 > 跨会话状态锚点。换会话第一动作 = 读本文件接管，不靠记忆、不靠前序对话。
 > 有 Edit/Write 的轮次，结束前必须先回写本文件（Stop hook 强制）。
 >
-> **当前任务：TASK-019-CICD出包（见文末，CODING 待本机验证）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
+> **当前任务：TASK-019-CICD出包（见文末，0026 轮绿，落点=Release+资产同步，编码坑已修，待 push 验证）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
 
 ---
 
@@ -1076,7 +1076,7 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 
 ## Task ID: TASK-019-CICD自动出包（Windows）
 
-**Status: CODING（两文件已落盘；本机验证被项目单实例锁拦——用户 Unity 编辑器开着，关闭后重跑）**
+**Status: CODING（Release 链 + 资产同步 + run 体 ASCII 化均已落码，待 push 三合一验证）**
 
 ## 目标
 
@@ -1093,6 +1093,10 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 - 落盘 2 文件：`Assets/Editor/CiBuild.cs`（导表→Addressables→BuildPlayer 三步链，平台守卫+Exit(0)/Exit(1)，namespace TapCom.EditorTools 对齐 QuickPlay 风格）、`.github/workflows/build-windows.yml`（push Dev_Pao + 手动；runs-on [self-hosted, windows]；checkout clean:false 保 Library 增量；batchmode 步骤 + artifact 上传 TapTap26-Win64-<run_number>，14 天保留；零 secret）｜已核验（Write 成功）
 - 本机验证 #1：batchmode 启动即被项目单实例锁拦，Unity exit 21「It looks like another Unity instance is running with this project open」——**脚本未执行到（CiBuild 未过编译验证）**，非 CiBuild 自身失败；物理卡点 = 用户 Unity 编辑器开着本项目，关闭后重跑同一条命令即可｜已核验（task output UNITY_EXIT_CODE=21 + log 原文）
 - 2026-10-18｜编译错误 CS0104 ×7（用户贴错，佐证 = 用户编辑器已导入编译 CiBuild.cs）：根因 = 同时 using System.Diagnostics（为 Stopwatch）与 UnityEngine → `Debug` 二义；修复 = 删 `using System.Diagnostics;` + 唯一一处改全限定 System.Diagnostics.Stopwatch｜已核验（Edit 成功）；重编译零错待用户 Unity 侧确认｜inference
+- 2026-10-18｜runner 首跑复盘（run 39121615144，用户贴日志）｜已核验：「Unity exit code: 0」+ 日志文件不存在 → 真相 = **PowerShell 不等 GUI 进程**，`& Unity.exe` 立即返回，$LASTEXITCODE 恒 0 假绿，Unity 刚启动未及写日志即被步骤回收；Get-Content 炸因 Actions powershell 预置 $ErrorActionPreference='stop'（非终止错误也致命）。修复 = `Start-Process -Wait -PassThru` 取真退出码 + 日志存在性守卫 + `Select-String` 对 `[CiBuild] SUCCESS` 标记复核（退出码与日志双自证，防再假绿）｜已核验（Edit 成功）
+- 2026-10-18｜出包时间戳化（用户指令「出包需要打时间戳」）：**单一时间戳源** = workflow `Get-Date yyyyMMdd-HHmm` → `-buildTimestamp` 传 Unity → CiBuild 解析命令行参数（本地直跑缺参回退本机当前时间）→ 产物 `Build/StandaloneWindows64/<时间戳>/<产品名>.exe` → 经 GITHUB_OUTPUT 回传 → artifact 名 `TapTap26-Win64-<时间戳>`。Build 根目录每轮整清（磁盘有界，历史靠 artifact 14 天）｜已核验（Edit 成功，CiBuild.cs 4 处 + yml 4 处）
+- 2026-10-18｜早前判断修正：runner 构建用自己 checkout（C:\actions-runner\_work\...），**与本地 Unity 编辑器单实例锁互不影响**——仅同路径 batchmode 验证才需关编辑器。watch-point：若下次构建日志出 Unity licensing/激活报错 = runner 以服务方式（SYSTEM 账号）运行看不到 Personal 授权 → 改回 run.cmd 交互跑｜inference
+- 2026-10-18｜runner 首跑（run 39121615144，C:\actions-runner 注册成功、checkout 正常）：构建步「Unity exit code: 0」+ 日志文件不存在 → 真相 = **PowerShell 不等 GUI 进程**，`&` 立即返回，$LASTEXITCODE 恒 0 假绿，Unity 刚启动未及写日志即被步骤回收；Get-Content 炸是因 Actions powershell 预置 ErrorActionPreference=stop｜已核验（用户贴 run 日志原文）。修复 = Start-Process -Wait -PassThru 拿真退出码 + 日志存在性 + Select-String 对 `[CiBuild] SUCCESS` 标记三重自证｜已核验（Edit 成功）。修正早前判断：runner 构建用自己 checkout（C:\actions-runner\_work\TapTap26\TapTap26），与本地编辑器的单实例锁互不影响——只有同路径 batchmode 才需关编辑器。watch-point：若重跑出 Unity licensing 报错 = runner 装成服务（SYSTEM 账号）看不到 Personal 授权，改回 run.cmd 交互跑｜inference
 
 ## Next Steps
 
@@ -1100,6 +1104,36 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 2. 人工（一次性）：Settings→Actions→Runners→New self-hosted runner（Windows x64）→ 按向导下载 → config.cmd 注册 → **run.cmd 交互启动（勿装服务：Unity license 绑登录用户）**。
 3. 验收：①本机构建 SUCCESS + 双击 exe 可玩 ②push Dev_Pao 自动触发 ③Actions 页下载 artifact（或本机 Build/ 直取）。
 4. 已知边界（已告知用户）：出包时须关本项目 Unity 编辑器；CI 包无 Wwise bank（无声，维持现状不扩范围）。
+- 2026-10-19｜run 39142110267（2357 轮）Exit 崩溃 + 0010 轮 BuildPlayer 失败，根因锤死（读 runner 本机 ci-build.log 6106 行 + 产物目录实证）｜已核验：
+  ① 2357 轮（用户贴日志）：EditorApplication.Exit → UnloadDomain 崩溃 0x40000015，成败未知（日志被 0010 轮覆盖）；crash 目录在 C:/Users/Henry/ = runner 以用户身份跑，license 无虞（watch-point 关闭）。
+  ② 0010 轮（00:10 重跑）：导表✓ → Addressables✓ → BuildPlayer ✗ Failed(2 errors)。两错同链：Burst bcl.exe 跑 2.8s 后死，HashCacheLoader.GetHeader 读 AK.Wwise.Unity.MonoBehaviour 的 Burst hash cache 截断（EndOfStreamException）→ "Failed to find entry-points" → 打包失败；Exit(1) 干净退出（尾部 Cleanup mono 正常，无崩溃）。
+  根因（高置信推断）：run 39121615144 的 Unity 被强杀于导入/缓存写入中途（PowerShell 未等 GUI 那轮），clean:false 把截断的 Burst 缓存留了下来。
+  处置（本轮落盘）：①已删 runner 工作区 Library/（删前确认无 Unity 进程挂该路径）②workflow 判成败改日志 SUCCESS 标记权威（防 Exit 崩溃把成功轮误报红；退出码只当失败信号）+ yml 头部加「被杀轮次后删 Library」维护注记｜已核验（python 锚点 count==1 + grep 落盘）。
+  未验证：下一轮全绿 + artifact 上传（等 push 触发）；Exit(0) 是否也撞 0x40000015（标记权威已兜住）。
+- 2026-10-19｜push b353aa0 触发重跑 → 全链路绿，本地出包成功｜已核验（读 runner 本机 ci-build.log + 产物目录 + Worker 日志）：
+  20261019-0026 轮：Library 已清 → 全量重导 → 导表✓→Addressables✓→BuildPlayer✓，[CiBuild] SUCCESS 总耗时 113s，包 102MB（C:ctions-runner\_work\TapTap26\TapTap26\Build\StandaloneWindows6461019-0026\，exe = My project (1).exe）；Unity 退出干净（0x40000015 未复现，标记权威逻辑留作保险）；job 16:26-16:33 UTC 约 7.5 分钟。
+  **artifact 上传存疑，倾向没传上（高置信推断，非定论）**：Worker 日志实证 $GITHUB_ARTIFACTS file empty + 0 subject(s) + upload 步骤 ~2s 完成；v4 空文件默认 warn 不红；步骤自身日志已被 runner 回收（_diag/blocks 清空）无法定论，用户 Actions 页侧未见包（其原话「我这里是host啊，应该在本地出包」佐证）。ROI 取舍：不追该根因，转本地出包形态。
+  拍板：包以本机落盘为准（用户明示），GitHub artifact 非交付物；待 Ask 卡拍落点（固定目录复制 / +清旧 / 现状）后改 workflow，改动另行证据三段。
+- 2026-10-19｜落点落码（Ask 卡拍板=「固定目录，去掉 artifact」）｜已核验（python 锚点断言 count==1 + grep 落盘行号）：
+  yml 两处：①Upload build（upload-artifact@v4）整段删除 → 新步骤 Copy to local output（if: success()）：复制 runner 工作区 Build/StandaloneWindows64/<时间戳>/ → D:\TapTap26_Builds\<时间戳>\，自证=目标目录 *.exe 在位才 exit 0，否则 exit 1；②头部产物注释同步（本机固定目录交付，GitHub 不留包，磁盘手清）。
+  顺手：现存 0026 包已复制到 D:\TapTap26_Builds61019-0026\（exe 672KB 在位，全目录 104MB）——用户现在即可双击。
+  未验证：push 后新轮的复制步骤真跑通（等下次触发）；包可玩性（边界不变：git checkout 缺 Arts → 画面缺图；无 Wwise bank → 无声）。
+  待办：yml 改动待 push（用户自推或说一声我来推）；D:\TapTap26_Builds\ 累积清理由用户自理（每包 ~104MB）。
+- 2026-10-19｜落点二改（用户否掉固定目录方案，原话「不行，固定打完包上传到build文件夹吧（zip），本地的包删除不要占用空间」→ Ask 卡拍板 = GitHub Release）｜已核验（python 锚点 count==1 + grep 落盘 + rm 实证）：
+  yml：Copy to local output 步骤删除 → 三步链：Zip build（Compress-Archive → Build\TapTap26-Win64-<ts>.zip，自证 zip≥10MB）→ Upload release（softprops/action-gh-release@v2，tag build-<ts>，files=zip，body 注明缺美术/无声边界）→ Clean local build（if: success 才删 Build 目录与 zip；Release 失败本地保留兜底）。job 级加 permissions: contents: write（GITHUB_TOKEN 建 Release/推 tag 必需）。头部产物注释同步。
+  本地清理：D:\TapTap26_Builds\ 整目录删除（含 0026 副本）；runner 工作区 Build/StandaloneWindows64/20261019-0026 删除（唯一现存包随之消失，可重打；0026 的 GitHub artifact 上轮未传上，该版本现无处可取——用户拍板不要本地留存，接受）。
+  未验证：zip/Release/清删三步首次真跑（softprops 首次在此 runner 用）；私有仓库 GITHUB_TOKEN 写权限实际放行（若 403 → repo Settings→Actions→Workflow permissions 改 read/write）。
+  待办：push 触发验证；验收 = Release 页出现 build-<时间戳> 带 zip（≥90MB）+ runner 工作区 Build 目录清空 + 本机磁盘无包残留。
+- 2026-10-19｜本地资产同步进构建（用户「push Dev_Pao → 自动构建，资产都在本地啊」= CI 要用上本机资产）｜已核验（cat .gitignore + du 两端目录实证）：
+  同步范围 = .gitignore 明确忽略的两处资产：Assets/Arts/（13MB 美术）+ Assets/StreamingAssets/Audio/GeneratedSoundBanks/（24MB Wwise bank）；/StreamingAssets/aa/* 与 AddressablesData *.bin 为构建自产物，不同步。
+  yml 新步骤 Sync local assets（Checkout 后 Build 前）：robocopy /MIR 从 D:\Github hierarchy\TapCom26\My project (1)\Assets 镜像两目录进 runner 工作区（路径绑本机，换机需改）；.meta 随资产复制（GUID 对齐场景/预制体引用——inference，Unity 常识级：引用锚在 meta 的 GUID）；robocopy 0-7=成功、≥8 exit 1；源目录缺失 exit 1 不静默；本步失败则后续步骤默认跳过，不出缺资产行包。
+  未验证：下轮 Release 包体积上涨（预期 +35MB 原始规模）+ 解压实跑画面/声音完整（Arts 进场景引用是 inference，bundle/直接引用构成未查）；bank 进包后运行时加载路径不变（前轮 WwiseSettings 已关拷贝闸，资产已就位时无影响）。
+  待办：与 Release 链一起 push（一次验证两改动）；验收 = Release zip 明显变大 + 用户解压实跑看图听声。
+- 2026-10-19｜run 39216643046 红 = 编码炸解析，已修（用户贴 run 页报错）｜已核验（报错原文 mojibake 实证 + Edit 落盘 grep/ASCII 扫描双自检）：
+  根因 = runner 把 run: 脚本体写成 UTF-8 无 BOM 临时 ps1，windows-powershell 按系统 ANSI（此机 Windows-1252，报错里中文全成「æœ¬åœ°」类 mojibake 实证）误读 → Sync local assets 步解析炸（TerminatorExpectedAtEndOfString，后续 } 全失配）→ exit 1，后续步骤按设计全跳过。0026 轮 Build 步带中文未炸属侥幸（mojibake 恰好引号仍成对），同风险一直潜伏。具体哪个字节序列失配引号未逐字节钉死（inference）；ASCII 化为充分修复（ASCII 在任何 codepage 同字节）。
+  修复 = 4 个 run: 脚本体全 ASCII 化（12 处替换 count==1 断言：注释+报错串英文化）；中文留头部 # 注释区（不进 ps1）+ 头部新增教训注记；Release body（YAML 字段非 ps1）保留中文。自检 = 扫描确认 run: 块内 0 非 ASCII。
+  未验证：下一轮 Sync 步真跑绿 + Release 链首发 + 资产同步后包体积上涨。
+  待办：push（Release 链 + 资产同步 + ASCII 化三合一验证）。
 - 2026-10-18｜音频 meta 直修生效 + 打包失败新断点根因｜已核验（用户贴 Console 日志 + 读源码 + cat WwiseSettings.xml）：
   ① meta 直修（用户「你能帮我做吗」授权）：x86_64 Release 引擎 Editor=1/Win64=1(CPU x86_64)、Profile Editor=0/Win64=0。**日志证据：same-name 冲突报错消失 + "Sound engine initialized successfully"**（引擎自证，Plugin DLL path 指向 x86_64\DSP）。
   ② 新断点=Build And Run 失败（Build Failed, 2 errors）：AkBuildPreprocessor.cs:147 闸 `CopySoundBanksAsPreBuildStep=true`（Assets/WwiseSettings.xml:3 实证）→ CopySoundbanks(:119)→GetSoundBankPaths 找「Wwise 工程」bank 源目录；`<WwiseProjectPath />` 为空 + 全仓库 glob *.wproj 0 命中 → "Could not find source folder for <Windows>"。bank 本就直接躺在 Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/（前轮对账），拷贝步骤在本项目**恒失败**（无工程可拷）。
@@ -1119,3 +1153,30 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
   **根因=Wwise 插件自管器与手改 meta 打架**：① EditorConfiguration 硬编码 Profile（AkPluginActivator.cs:29）→ 域重载时 ActivatePluginsForEditor(:191) 恒把 x86_64/Profile 引擎 Editor 位设 1；② 打包配置 CurrentPluginConfig 读 AkWwiseProjectData.asset（现为空→fallback "Profile"，:44-53；资产落盘实证 CurrentPluginConfig: 空）；③ 构建收尾 ActivatePluginsForDeployment(false) 把 Profile Editor 位翻回 1 → 与我上轮手改的 Release Editor=1 撞同名 → Build Failed。④ 更深坑：即便不撞名，Release 引擎在打包时也因 config("Release")!=GetCurrentConfig()("Profile") 被跳过（:162）→ 包里没引擎 DLL → 无声。**结论：手改 meta 是不稳定态，必须顺着自管器设计走**。
   设计态（自管器期望）：Editor=Profile 引擎（唯一）；打包 config 由 CurrentPluginConfig 决定（官方开关=菜单 Assets→Wwise→Activate Plugins→Release/Profile/Debug，AkPluginActivatorMenus.cs:12 写资产）；构建期自管器自己翻 Win64 位、收尾翻回 0（正常，勿再手改）。
   修复方案（待用户选执行方式）：A 菜单切 Release（写 CurrentPluginConfig）+ B Release meta Editor 位 1→0（Profile Editor=1 保留=设计态）→ 重新 Build And Run。未验证：修复后构建/包内声音/编辑器 BGM。
+- 2026-10-18｜修复落盘（AskUserQuestion 拍板=我直接改）｜已核验（python 锚点断言 count==1，改后 grep 实证）：x86_64/Release 引擎 meta Editor 位 1→0（LF 文件，锚点唯一）。终态对齐自管器设计态：Release Editor=0/Win64=0（构建期自管器自己翻 Win64，收尾翻回 0，正常勿手改）；Profile Editor=1（硬编码设计态，保留）。待用户人工：Unity 菜单 Assets→Wwise→Activate Plugins→Release（写 AkWwiseProjectData.asset CurrentPluginConfig，官方开关 AkPluginActivatorMenus.cs:12）→ 重新 Build And Run。未验证：构建成功与否/包内声音/编辑器 BGM。
+- 2026-10-18｜「绑玩法」拍板=先验证现状 7 个（AskUserQuestion）+ 新需求：reset 时 BGM 跟着重开（用户明说）｜已核验（读 LevelManager/VictoryPanel 全文 + grep reset 路径 + AudioManager 映射）：
+  reset 路径收敛：R 键（ResetButton.cs:18）/ 游戏内重开 + 结算面板重开（VictoryPanel.cs:111）/ 失败重试（DefeatPanel.cs:80）→ 全走 LevelManager.Reload()（:71-75）= TrySetState(Loading)→LoadCurrent→Load→TrySetState(Cg)（:105）→（Cg 线推）→Playing。下一关 Advance 同样过 Loading（:87）。
+  **缺口**：AudioCatalog 状态映射只有 Playing→Play_BGM / TitleScreen→Stop_BGM（AudioManager.cs:31-36）→ 重开时无人发 Stop，旧 music 持续，Cg→Playing 再叠 Play_BGM（Wwise music 对象二次 post 行为=inference：堆叠或忽略，反正不从头）。用户需求：reset→BGM 从头。
+  **修法（一行，待用户拍时机）**：AudioCatalog.For(GameStateChangedEvent) 加 `GameState.Loading => MusicStop`。全路径效果：重开/换关 Loading 停 → Playing 从头播；首进 Title→Loading Stop=空操作；ESC 回标题不受影响。
+  open-question（不改）：暂停恢复 Paused→Playing 现有映射即重发 Play_BGM，恢复时可能叠音乐——待验证时实测再定（可能与 Loading→Stop 同批处理）。
+  验证清单（用户 Unity 侧）：重启 Unity（清插件冲突残留）→ Play：①进关 [Audio] bank loaded: Main + play Play_BGM，BGM 出声 ②投种子 play Play_Seed_Throw ③四配方各一声 ④R 重开：play Stop_BGM → play Play_BGM，音乐从头 ⑤ESC 回标题 Stop_BGM。若 BGM 出声但夹 plugin missing/MatrixReverb 报错→第二断点（bank 用 Matrix Reverb，工程无 AkMatrixReverb.dll），报错原文发我再定。
+  Tier1 扩绑候选（验证后再开，AskUserQuestion 已拍先验证）：Level_Complete/Failed、Seed_Switch、Ambient_Ruin、Player_Crushed、Seed_Land、Level_Reset（需区分重开 vs 首进）。
+- 2026-10-18｜reset-BGM 落码（AskUserQuestion 拍板=现在就落）｜已核验（python 锚点断言 count==1，grep 落盘行号）：AudioManager.cs:35 AudioCatalog 加 `GameState.Loading => MusicStop`（LF 文件）。效果：R 键/重开按钮/结算重开/失败重试/下一关全过 Loading 态 → 停旧曲，Cg→Playing 从头播；首进/回标题不变。
+  待用户 Unity 侧验证（重启 Unity 清插件残留 → Play）：①进关 bank loaded: Main + play Play_BGM 出声 ②投种 Play_Seed_Throw ③四配方各一声 ④R 重开 play Stop_BGM → play Play_BGM 从头 ⑤ESC 回标题 Stop_BGM ⑥顺带听暂停→继续是否叠乐（Paused→Playing 重发问题，已记 open-question）。未验证：全部。MatrixReverb 缺 DLL 悬案仍在。
+
+### 2026-10-18 音效设计表接线：玩家动作 + 种子落格（全表 6 条）
+- 需求：用户贴音效设计表「你做」；Ask 拍板：全表 6 条（Jump/Land/Walk/FastFall/Crushed/Seed_Land；Throw 已接）+ FastFall 新增 Inspector 字段默认 10。
+- 改动 3 文件（未编译——等 Unity 刷新看 Console）：
+  - GameEvents.cs（CRLF）：FailTriggeredEvent 后新增 PlayerJumpedEvent / PlayerLandedEvent{ImpactSpeed} / PlayerFastFallEvent / PlayerWalkChangedEvent{Walking}。
+  - PlayerMotor.cs（CRLF）：新增 _fastFallSpeed=10 + _fastFallPlayed + _walkPlaying；跳跃分支发 Jumped；落地沿非致死发 Landed（ImpactSpeed=_airborneFallSpeed），致死仍只发 Fall；空中速度≥_fastFallSpeed 一次性发 FastFall，接地复位；UpdateWalkSound(地面+横输入>0.1) 变化沿发 Walk 开关；零重力分支/摔死处/新 OnDisable 三处停走。
+  - AudioManager.cs（LF）：AudioCatalog +7 常量 +6 For()（FailTriggered→仅 Crush 发 Play_Player_Crushed；CellWorldChanged→仅 Added&&MoverId==0 发 Play_Seed_Land）；AudioManager 构造 +6 Subscribe/OnXxx。
+- 已核验（读码）：JumpPressed 边沿触发（PlayerInputReader.cs:29 WasPressedThisFrame）不连发；ZeroDriftSpeed=5.9375（MagicParams.cs:57）→ 阈值 10 失重场不误触；种子落格全库唯一锚 MagicCircuitSimulator.cs:230-231（Added 且 MoverId=0，:275 运动格落定带 mover.Id）；Crush 事件已在 PlayerCrushDetector.cs:45；bank 含 Stop_Player_Walk（Main.txt ID 4125394165）。
+- inference（未编译/未跑 runtime）：出声验证靠 Editor Play 看 Wwise 日志；Seed_Land 不区分撞方块/落地面（按落定触发）；失重场贴地沿可能触发 Landed；Walk 抖动可能 Play/Stop 快速交替；Cg/Victory 期间 Motor 无状态门（既有行为）脚步音跟随。
+- 下一步：用户 Unity 回 Ctrl+R 刷新编译 → Play 跑验收清单（跳/落地/走停/大落差风声/被砸/种子落格/R 重开时走路声停）。
+
+### 2026-10-18 全表接线第二批（13 Event；Status 挂起）
+- 拍板：UI_Click 9 按钮全接；Victory/Defeat 结算时 BGM+环境即停（按设计表「通关/死亡时停止」，改上轮行为）；Status 开关组 bank 缺失挂起。
+- 改动 8 文件 20 hunk（未编译）：GameEvents +PlayerAimChangedEvent{Aiming}/UiClickedEvent；PlayerThrower 瞄准沿统一（_wasAiming 判定提前共判，随机分支改读 aimToggled）+ 非 Playing 早退停瞄准音 + 新 OnDisable 兜底；AudioManager +13 常量（SpellConfirm=public）+ ForAmbient/ForReset + For(CellWorldChanged) 四分诊 + For(FailTriggered) else→LevelFailed + For(GameStateChanged) 增 Victory/Defeat→MusicStop + 4 新订阅 + OnStateChanged 三音并发 + OnSpellCast 叠加确认音；UI 5 文件 9 处按钮处理器首行 Publish UiClickedEvent（TitleScreenUI×2/PausePanel×2/VictoryPanel×2/DefeatPanel×2/ResetButton×1，R 键与按钮共用 ResetLevel 路径）。
+- 已核验（读码）：AimHeld 右键按住已存在（PlayerInputReader.cs:38 IsPressed）；_wasAiming 原随机分支已用（PlayerThrower:46,78-80）；R 键热键存在（ResetButton.cs:25 rKey.wasPressedThisFrame）；GameStateChangedEvent.From 存在（GameManager.cs:10）；bank 无 Status/switch 组（Main.txt grep -i 仅 Play_Seed_Switch 事件命中）→ Status 挂起；种子耗尽失败不存在（FailReason 仅 Fall/Crush/TimeUp，Thrower 拒投不判败）→ open-question。
+- inference（未编译/未跑 runtime）：全部出声待 Editor Play 验证；blast 弹飞 N 格叠 N 声 Rock_Fall、zero 消失 N 格叠 N 声 Rock_Crumble（Wwise voice 限流兜底，试听定）；Seed_Switch 随机模式（默认关）瞄准重掷也响；Paused→Playing 重发 Play_BGM/Play_Ambient_Ruin 叠加为既有 open-question（本轮未动）；Status 需 bank 补 status_Switch/Badly_status + 紧张触发条件定义 + 后端 SetSwitch 扩展。
+- 下一步：用户编译看 Console → Play 全表验收（见汇报清单）。

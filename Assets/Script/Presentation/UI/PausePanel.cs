@@ -54,12 +54,14 @@ namespace TapCom.Presentation
         /// <summary>继续游戏（Paused→Playing 边已有；按钮 onClick 调用）。</summary>
         public void ResumeGame()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click
             Services.Container.Get<GameManager>().TrySetState(GameState.Playing);
         }
 
         /// <summary>回标题（Paused→TitleScreen 边已有；ExitToTitle 卸数据 + SceneFlow 切场景）。</summary>
         public void BackToTitle()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click
             Services.Container.Get<LevelManager>().ExitToTitle();
         }
     }

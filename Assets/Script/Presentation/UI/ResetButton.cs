@@ -15,6 +15,7 @@ namespace TapCom.Presentation
         /// <summary>重开当前关（Reload 内部先 TrySetState(Loading)，被拒则不装载）。</summary>
         public void ResetLevel()
         {
+            Services.EventBus.Publish(new UiClickedEvent()); // 设计表 Play_UI_Click（按钮与 R 键共用）
             Services.Container.Get<LevelManager>().Reload();
         }
 
