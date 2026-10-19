@@ -57,6 +57,9 @@ namespace TapCom.Core
     public struct SeedTypeChangedEvent
     {
         public SeedMagicType Type;
+
+        /// <summary>true=用户切色（1/2/3 键/滚轮 → 播 Play_Seed_Switch）；false=程序同步（投出后自动换牌 → 静默，仅 HUD 消费）。2026-10-19 用户需求：切色音不进投掷流程。</summary>
+        public bool ByUser;
     }
 
     /// <summary>魔法效果释放瞬间（表现钩子：圈/火花/屏感）。蓄能中的高亮走模拟器查询拉取，不发事件。</summary>

@@ -35,6 +35,16 @@ Assets/Config/*.csv  --导表工具-->  Assets/AddressableAssets/Configs/*.json 
 - 加载走 Addressables（`com.unity.addressables`），不用 `Resources.Load`。
 - 路径常量以 `Assets/TableTool/Editor/TableConverter.cs` 的 `CsvRoot` / `OutputRoot` 为准，改动即全管线改动。
 
+## CI 出包管线（2026-10-19 建，勿绕过）
+
+```
+push Dev_Pao --> GitHub Actions --> self-hosted runner(本机) --> 同步本地资产 --> 导表/Addressables/打包 --> zip --> GitHub Release --> 清本地
+```
+
+- workflow 与运维细节（runner 注册、Library 缓存清理、run 体 ASCII 纪律）：`.github/workflows/build-windows.yml` 头部注释；构建脚本：`Assets/Editor/CiBuild.cs`。
+- 取包只认仓库 Release 页（tag `build-<时间戳>` 的 zip）；本地与 runner 工作区不留包。
+- 出包前提：本机 runner 在线（run.cmd 交互窗口，勿装服务）；D 盘资产在原位——同步步校验，缺失直接红。
+
 ## 其他
 
 - `Assets/TutorialInfo/`、`Assets/Readme.asset` 是 Unity 模板残留，与游戏无关，不要往里加东西。

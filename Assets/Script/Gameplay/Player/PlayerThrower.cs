@@ -159,12 +159,12 @@ namespace TapCom.Gameplay
             Services.EventBus.Publish(new SeedTypeChangedEvent { Type = CurrentSeedType });
         }
 
-        /// <summary>TASK-016 手动切色：序列化字段与当前待投值同写（RollSeedType 非随机分支回读 _currentSeedType 不回退）。</summary>
+        /// <summary>TASK-016 手动切色：序列化字段与当前待投值同写（RollSeedType 非随机分支回读 _currentSeedType 不回退）。用户主动切色 → ByUser=true（发声）。</summary>
         private void SetSeedType(SeedMagicType type)
         {
             _currentSeedType = type;
             CurrentSeedType = type;
-            Services.EventBus.Publish(new SeedTypeChangedEvent { Type = type }); // TASK-018：HUD 指针跟随 1/2/3 键与滚轮
+            Services.EventBus.Publish(new SeedTypeChangedEvent { Type = type, ByUser = true }); // TASK-018：HUD 指针跟随 1/2/3 键与滚轮；2026-10-19 用户切色才播切色音
         }
 
         /// <summary>TASK-016 滚轮循环：delta ±1，超出表尾绕回（Blue→Red→Yellow→Blue）。</summary>

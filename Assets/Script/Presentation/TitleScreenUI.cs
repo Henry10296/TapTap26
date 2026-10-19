@@ -38,6 +38,12 @@ namespace TapCom.Presentation
             }
             // CoreDriver 在 BeforeSceneLoad 已切到 TitleScreen（早于本组件），这里补一次显示判断
             Show(Services.Container.Get<GameManager>().Current == GameState.TitleScreen);
+
+            // 2026-10-19 用户拍板「标题起播」：状态切换那发 Play_BGM 早于引擎初始化会落空，此处（晚于 AkInitializer）补发；已在响则幂等。
+            if (Services.Container.Get<GameManager>().Current == GameState.TitleScreen)
+            {
+                Services.Container.Get<AudioManager>().PlayMusic();
+            }
         }
 
         private void OnStateChanged(GameStateChangedEvent e)

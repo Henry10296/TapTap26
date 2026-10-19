@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TapCom.Core;
 
 namespace TapCom.Presentation
@@ -10,7 +11,8 @@ namespace TapCom.Presentation
     /// </summary>
     public static class AudioCatalog
     {
-        private const string MusicPlay = "Play_BGM";
+        /// <summary>BGM 起/重起（2026-10-19 用户拍板「标题起播」后 public：AudioManager.PlayMusic 标题补发口直用，对齐 SpellConfirm 先例）。</summary>
+        public const string MusicPlay = "Play_BGM";
 
         private const string MusicStop = "Stop_BGM";
 
@@ -59,6 +61,12 @@ namespace TapCom.Presentation
 
         private const string UiClick = "Play_UI_Click";
 
+        // —— Wwise Switch（2026-10-19 新 bank：Status 组 status_Switch=平静 / Badly_status=紧张；代码现只做重置，紧张触发时机未定挂账）——
+        /// <summary>Status Switch 组名与平静值（对齐 Main.json SwitchGroups；进关/重开一律重置回平静，2026-10-19 用户需求）。</summary>
+        public const string SwitchGroupStatus = "Status";
+
+        public const string SwitchCalm = "status_Switch";
+
         public static string For(in SeedThrownEvent evt) => SeedThrow;
 
         public static string For(in PlayerJumpedEvent evt) => PlayerJump;
@@ -81,8 +89,12 @@ namespace TapCom.Presentation
             _ => null,
         };
 
-        /// <summary>切色音（1/2/3 键+滚轮；三色音高差异归 Wwise 侧）。</summary>
-        public static string For(in SeedTypeChangedEvent evt) => SeedSwitch;
+        /// <summary>三石头声判定（供 AudioManager 同波合并限流；2026-10-19 用户反馈 4 拍板代码侧合并）。</summary>
+        public static bool IsRockSound(string soundId) =>
+            soundId == RockFall || soundId == RockLand || soundId == RockCrumble;
+
+        /// <summary>切色音（1/2/3 键+滚轮；三色音高差异归 Wwise 侧）。仅用户切色发声；投出后自动换牌静默（2026-10-19 用户需求：切色音不进投掷流程）。</summary>
+        public static string For(in SeedTypeChangedEvent evt) => evt.ByUser ? SeedSwitch : null;
 
         public static string For(in VictoryTriggeredEvent evt) => LevelComplete;
 
@@ -104,7 +116,7 @@ namespace TapCom.Presentation
         public static string For(in GameStateChangedEvent evt) => evt.To switch
         {
             GameState.Playing => MusicPlay,
-            GameState.TitleScreen => MusicStop,
+            GameState.TitleScreen => MusicPlay, // 2026-10-19 用户拍板「标题起播、进关重起」：标题也起 BGM；TitleScreen→Loading 仍 Stop → 进关从头（原为静音）
             GameState.Loading => MusicStop, // reset/换关全过 Loading（LevelManager.Reload/Advance），停旧曲让 Playing 从头播（2026-10-18 用户需求：BGM 跟着重开）
             GameState.Victory or GameState.Defeat => MusicStop, // 结算即停（2026-10-18 拍板按设计表「通关/死亡时停止」）
             _ => null,
@@ -130,7 +142,13 @@ namespace TapCom.Presentation
     /// </summary>
     public class AudioManager
     {
+        /// <summary>石头声同波窗口 ms：窗口内同类石头声只发一声（blast 弹飞/zero 消失 N 格=每格一事件，不合并会叠爆；2026-10-19 反馈 4）。</summary>
+        private const int RockCoalesceWindowMs = 80;
+
         private readonly IAudioBackend _backend;
+
+        /// <summary>同类石头声上次发声时刻（Environment.TickCount ms；int 回绕下 unchecked 减法安全）。</summary>
+        private readonly Dictionary<string, int> _lastRockPlayMs = new Dictionary<string, int>();
 
         public AudioManager(EventBus bus, IAudioBackend backend)
         {
@@ -159,9 +177,15 @@ namespace TapCom.Presentation
             PlayMapped(AudioCatalog.SpellConfirm);
         }
 
-        /// <summary>状态变化多音并发：BGM + 环境底噪 + 重开音各自独立判定（null 跳过）。</summary>
+        /// <summary>状态变化多音并发：Switch 重置 + BGM + 环境底噪 + 重开音各自独立判定（null 跳过）。</summary>
         private void OnStateChanged(GameStateChangedEvent evt)
         {
+            if (evt.To == GameState.Playing)
+            {
+                // 进关卡/重开一律先回平静层再起 BGM（2026-10-19 用户需求：紧张层不跨局残留；须先于 Play 生效）。
+                _backend.SetSwitch(AudioCatalog.SwitchGroupStatus, AudioCatalog.SwitchCalm);
+            }
+
             PlayMapped(AudioCatalog.For(evt));
             PlayMapped(AudioCatalog.ForAmbient(evt));
             PlayMapped(AudioCatalog.ForReset(evt));
@@ -177,7 +201,28 @@ namespace TapCom.Presentation
 
         private void OnFail(FailTriggeredEvent evt) => PlayMapped(AudioCatalog.For(evt));
 
-        private void OnCellWorldChanged(CellWorldChangedEvent evt) => PlayMapped(AudioCatalog.For(evt));
+        /// <summary>格变化发声；石头三声按类型同窗合并（窗口内重复只发第一声，2026-10-19 反馈 4；Seed_Land 不参与）。</summary>
+        private void OnCellWorldChanged(CellWorldChangedEvent evt)
+        {
+            var soundId = AudioCatalog.For(evt);
+            if (soundId == null)
+            {
+                return;
+            }
+
+            if (AudioCatalog.IsRockSound(soundId))
+            {
+                var now = System.Environment.TickCount;
+                if (_lastRockPlayMs.TryGetValue(soundId, out var last) && unchecked(now - last) < RockCoalesceWindowMs)
+                {
+                    return;
+                }
+
+                _lastRockPlayMs[soundId] = now;
+            }
+
+            PlayMapped(soundId);
+        }
 
         private void OnSeedTypeChanged(SeedTypeChangedEvent evt) => PlayMapped(AudioCatalog.For(evt));
 
@@ -186,6 +231,10 @@ namespace TapCom.Presentation
         private void OnPlayerAimChanged(PlayerAimChangedEvent evt) => PlayMapped(AudioCatalog.For(evt));
 
         private void OnUiClicked(UiClickedEvent evt) => PlayMapped(AudioCatalog.For(evt));
+
+        /// <summary>标题 BGM 补发口（2026-10-19 用户拍板「标题起播」）：CoreDriver 切 TitleScreen 早于引擎初始化（BeforeSceneLoad），首启那发会静默落空；
+        /// TitleScreenUI.Start（晚于场景 AkInitializer）补发。music 已在响时 Wwise 二次 Play 为无操作 → 幂等。</summary>
+        public void PlayMusic() => PlayMapped(AudioCatalog.MusicPlay);
 
         private void PlayMapped(string soundId)
         {

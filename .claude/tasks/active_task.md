@@ -3,7 +3,7 @@
 > 跨会话状态锚点。换会话第一动作 = 读本文件接管，不靠记忆、不靠前序对话。
 > 有 Edit/Write 的轮次，结束前必须先回写本文件（Stop hook 强制）。
 >
-> **当前任务：TASK-019-CICD出包（见文末，0026 轮绿，落点=Release+资产同步，编码坑已修，待 push 验证）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
+> **当前任务：TASK-019-CICD出包（见文末，三合一跑绿（Release zip+资产同步+ASCII），待解压实跑终验收）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
 
 ---
 
@@ -1076,7 +1076,7 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 
 ## Task ID: TASK-019-CICD自动出包（Windows）
 
-**Status: CODING（Release 链 + 资产同步 + run 体 ASCII 化均已落码，待 push 三合一验证）**
+**Status: 验收（CI 链全绿：Release zip + 本地资产同步 + 清本地；待用户解压实跑确认图/声完整后 DONE）**
 
 ## 目标
 
@@ -1134,6 +1134,12 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
   修复 = 4 个 run: 脚本体全 ASCII 化（12 处替换 count==1 断言：注释+报错串英文化）；中文留头部 # 注释区（不进 ps1）+ 头部新增教训注记；Release body（YAML 字段非 ps1）保留中文。自检 = 扫描确认 run: 块内 0 非 ASCII。
   未验证：下一轮 Sync 步真跑绿 + Release 链首发 + 资产同步后包体积上涨。
   待办：push（Release 链 + 资产同步 + ASCII 化三合一验证）。
+- 2026-10-19｜三合一 push 跑绿（run 15:44 本地 / Worker_20261019-074407-utc）｜已核验（git 与 origin 同步 + Worker 日志：action-gh-release 步 Succeeded、Clean local build 步 Succeeded、job completed）：
+  Sync local assets（ASCII 化后）✓ → Build ✓ → Zip ✓ → Upload release ✓（softprops/action-gh-release@v2 首用即成，GITHUB_TOKEN 写权限放行无 403）→ Clean ✓（runner 工作区 Build 目录空，磁盘无残留）。job 约 4.5 分钟（增量 Library + 资产增量同步）。
+  资产同步闭环待最后一步：用户从 Release 页下载解压实跑确认看图+听声（此前已给取包路径 https://github.com/Henry10296/TapTap26/releases）。
+- 2026-10-19｜用户确认 Actions 绿 + 拍板沉淀（「可以，你沉淀一下」）｜已核验（4 文件落盘 count==1 断言）：
+  全局 CLAUDE.md 新增 §9（PowerShell GUI 假绿 / run 体 ASCII / Unity 强杀缓存投毒 / 日志标记判绿，四条通用陷阱）；项目 CLAUDE.md 新增「CI 出包管线」小节（管线图 + 取包认 Release + 出包前提，指针式不重复 yml 头注）；resume-client-tech.md Why 段升级为跑绿后状态 + 实战细节清单。记忆 taptap26-assets-not-uploadable 上一轮已修正（self-hosted robocopy 方案）。
+  待用户：解压实跑终验收（图/声）。
 - 2026-10-18｜音频 meta 直修生效 + 打包失败新断点根因｜已核验（用户贴 Console 日志 + 读源码 + cat WwiseSettings.xml）：
   ① meta 直修（用户「你能帮我做吗」授权）：x86_64 Release 引擎 Editor=1/Win64=1(CPU x86_64)、Profile Editor=0/Win64=0。**日志证据：same-name 冲突报错消失 + "Sound engine initialized successfully"**（引擎自证，Plugin DLL path 指向 x86_64\DSP）。
   ② 新断点=Build And Run 失败（Build Failed, 2 errors）：AkBuildPreprocessor.cs:147 闸 `CopySoundBanksAsPreBuildStep=true`（Assets/WwiseSettings.xml:3 实证）→ CopySoundbanks(:119)→GetSoundBankPaths 找「Wwise 工程」bank 源目录；`<WwiseProjectPath />` 为空 + 全仓库 glob *.wproj 0 命中 → "Could not find source folder for <Windows>"。bank 本就直接躺在 Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/（前轮对账），拷贝步骤在本项目**恒失败**（无工程可拷）。
@@ -1180,3 +1186,18 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 - 已核验（读码）：AimHeld 右键按住已存在（PlayerInputReader.cs:38 IsPressed）；_wasAiming 原随机分支已用（PlayerThrower:46,78-80）；R 键热键存在（ResetButton.cs:25 rKey.wasPressedThisFrame）；GameStateChangedEvent.From 存在（GameManager.cs:10）；bank 无 Status/switch 组（Main.txt grep -i 仅 Play_Seed_Switch 事件命中）→ Status 挂起；种子耗尽失败不存在（FailReason 仅 Fall/Crush/TimeUp，Thrower 拒投不判败）→ open-question。
 - inference（未编译/未跑 runtime）：全部出声待 Editor Play 验证；blast 弹飞 N 格叠 N 声 Rock_Fall、zero 消失 N 格叠 N 声 Rock_Crumble（Wwise voice 限流兜底，试听定）；Seed_Switch 随机模式（默认关）瞄准重掷也响；Paused→Playing 重发 Play_BGM/Play_Ambient_Ruin 叠加为既有 open-question（本轮未动）；Status 需 bank 补 status_Switch/Badly_status + 紧张触发条件定义 + 后端 SetSwitch 扩展。
 - 下一步：用户编译看 Console → Play 全表验收（见汇报清单）。
+
+### 2026-10-19 新 bank 对账 + 音频 6 条反馈（1/3 落码，2/4/5/6 诊断/待拍板）
+- 新 bank（Main.bnk 10-19 19:26，24.5MB 媒体全内嵌 23 条）对账：27 事件与 AudioManager 27 常量 1:1 大小写一致；**修正上轮「bank 无 Status」结论：Main.json SwitchGroups 有 Status 组（status_Switch/Badly_status）**——.txt 清单不列 Switch 组，看 .json 才有；**Stop_BGM 事件时长 15.36s（其余 Stop 全 0）→ 重开不从头根因推断：停动作挂大淡出，旧 music 未停时 Play_BGM 对活动 music 不重启**；music1/music2 同字节数 3317920（疑似同素材导两份）；Play_Seed_Land 复用 Player_Land 素材（时长同 0.9135，无专属媒体）。
+- 代码 4 文件（未编译，等 Unity 刷新）：①AudioBackend：IAudioBackend +SetSwitch(group,value)；WwiseAudioBackend 实现 + EnsureBankLoaded 抽取（switch 前确保 bank，防首次进关懒加载未完成时设置落空）②AudioCatalog +SwitchGroupStatus="Status"/SwitchCalm="status_Switch" 常量；OnStateChanged 进 Playing 先 SetSwitch 重置平静再 Play_BGM（用户需求 1 后半）③GameEvents.SeedTypeChangedEvent +ByUser 字段（默认 false=静默）④PlayerThrower.SetSeedType 发布 ByUser=true（1/2/3+滚轮）；AudioCatalog.For(SeedTypeChanged)=ByUser?SeedSwitch:null → 投出后自动换牌（RollSeedType）/随机瞄准重掷不再叠切色音（用户需求 3；上一轮「Seed_Switch 随机模式也响」挂账就此关闭）。
+- 已核验：ef6945a（音频码）是 CI 包 a07fce8 祖先 → 今天 15:44 包含全部现有音频码但 bank 是 10-12 旧版（新 bank 19:26 才落，且 bank 目录 gitignored，进包靠 runner 资产同步）；AkInitializer/AkGameObj/AkAudioListener 在全部 7 场景（GUID 扫描；场景 YAML 按组件名 grep 查不到=已知盲区）；CoreBootstrap 走 RuntimeInitializeOnLoadMethod 不挂场景；重开链：R→ResetButton.Update→Reload→Playing→Loading（代码已发 Stop_BGM+AmbientStop+LevelReset）→Load→Cg→（非 fresh 秒过 BeginIntro→StartCameraIntro）→Playing（Play_BGM+AmbientPlay），Stop 与 Play 同帧相邻。
+- inference（标明未验证）：Stop_BGM 15.36s=停止动作淡出时长（.json Event Duration 语义推断，wproj 在 Y:\Desktop\wwise101\music_test 本机未挂载无法核）；Play_Ambient_Ruin 事件内部接线无法核（同上）；用户反馈 2「环境音没触发」与代码 ForAmbient 已接线矛盾 → 待定位（疑所测为 CI 包旧 bank，或 bank 事件内容问题，或音量低于感知）。
+- open-questions：用户反馈 4 石头声叠爆（CellWorldChanged 每格一发，blast/zero 大范围毁格=叠爆；上轮原定 Wwise voice 限流兜底，今日待拍板：代码同波合并 / Wwise 限流 / 两者）；反馈 5 紧张层（bank 结构已就位，代码从不 SetSwitch → 恒默认值；现改为每次进 Playing 重置 status_Switch；「紧张触发时机」设计未定义）；反馈 6 标题页（TitleScreen→Stop_BGM 静音系代码现状 by design；标题 UI click 事件链完整可响，用户实测无声待定位——疑与所测 bank 版本相关）。
+- Wwise 侧待办（Y: 盘工程，非本机，需音频侧人工）：Stop_BGM 淡出改 0~0.1s 重导 bank（重开不从头的主修）；确认 Status 组默认值=status_Switch；验证 Play_Ambient_Ruin 事件内容指向；music1/music2 是否同素材确认。
+- 验收清单（Unity 编译后 Play）：①投种子：只闻 Throw，无切色音叠入；落格 Seed_Land ②1/2/3+滚轮：切色音响 ③R 重开：Console 见 play Stop_BGM → play Play_BGM 顺序（若 bank 未改淡出，音乐仍不从头——属预期，等 Wwise 侧修）④进关 Console 见 switch Status = status_Switch ⑤标题页点按钮听 UI click。
+- 2026-10-19 拍板三连（AskUserQuestion）：①所测=CI 解压包（bank 为 10-12 旧版）→ 反馈 2 环境音无声/反馈 6 UI click 无声疑为旧 bank 因素，新 bank 需 Editor 重测定位 ②反馈 4=代码侧同波合并 ③反馈 6=标题起播、进关重起。
+- 第二轮代码 2 文件（未编译）：AudioManager.cs：MusicPlay 转 public（对齐 SpellConfirm 先例）；For(GameStateChanged) TitleScreen 分支 Stop→Play；+public PlayMusic() 补发口（幂等：music 在响时 Wwise 二次 Play 无操作）；+RockCoalesceWindowMs=80 常量 + _lastRockPlayMs 字典；OnCellWorldChanged 石头三声按类型同窗去重（首发生效、窗内重复丢弃；Seed_Land 不参与）；AudioCatalog +public IsRockSound。TitleScreenUI.cs：Start 标题态补发 PlayMusic（CoreDriver BeforeSceneLoad 切 TitleScreen 早于引擎初始化必落空；Start 晚于场景 AkInitializer 必就绪）。
+- 关键时序推演（读码）：首启 CoreDriver.Awake(BeforeSceneLoad)→TrySetState(TitleScreen)→Play_BGM 落空（引擎未初始化）→AkInitializer 初始化→TitleScreenUI.Start 补发成功；回标题（ExitToTitle/Paused→TitleScreen）For=Play_BGM 但 music 在响→无操作不叠，幂等；进关 TitleScreen→Loading 仍 Stop→Playing 从头=「进关重起」。
+- 验收清单追加：⑥开机进标题即有 BGM ⑦点开始进关：BGM 停→从头起 ⑧blast 大范围毁格每类石头声至多一声/80ms 窗 ⑨Editor+新 bank 重测环境音与标题 UI click（定位旧包疑云）。
+- 2026-10-19 编译错两处修复（用户贴 CS0103 ×2）：①:215 Environment→System.Environment（文件无 using System，改全限定不引新 using）②:237 PlayMapped(MusicPlay)→PlayMapped(AudioCatalog.MusicPlay)（AudioManager 内裸引 AudioCatalog 常量漏限定）。grep 复核全文件无第三处裸引用。教训：AudioCatalog 常量在 AudioManager 内一律 AudioCatalog. 限定；本文件后续新增代码沿用。
+- 2026-10-19 反馈「通关 BGM 泄露」（=15.36s 淡出根因第二次显形；代码 10-18 起结算就发 Stop_BGM，bank 淡出让停止无效）→ AudioBackend.cs 加硬停兜底（1 文件，未编译）：+MusicPlayEvent/MusicStopEvent 私有常量 + _musicPlayingId 字段（Play_BGM 成功后记录实例）；Play() 内发 Stop_BGM 时先 StopPlayingID(id,0) 硬停再照发事件。效果：通关/失败/重开/败重试（凡发 Stop_BGM 处）音乐立即停；重开不从头一并代码侧修复。Wwise 侧改小淡出后兜底自动成无操作（日志行消失=bank 已修）。用户附注「一关只有一个bgm」→ music1/music2 同素材属预期，同字节疑点关闭，无需处理。
