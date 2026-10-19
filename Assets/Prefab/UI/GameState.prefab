@@ -186,7 +186,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 0fc434a79cbc559458dab4a9313da0fc, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -681,8 +681,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _panel: {fileID: 9146143639581329170}
-  _resultImage: {fileID: 0}
-  _victorySprite: {fileID: 0}
-  _defeatSprite: {fileID: 0}
+  _resultImage: {fileID: 7553905852434987670}
+  _victorySprite: {fileID: 21300000, guid: 0fc434a79cbc559458dab4a9313da0fc, type: 3}
+  _defeatSprite: {fileID: 21300000, guid: 99025ff9296af3642a5866f72beae263, type: 3}
   _nextLevelButton: {fileID: 4728126692756945862}
   _resetButton: {fileID: 5339966396680454114}
