@@ -3,7 +3,7 @@
 > 跨会话状态锚点。换会话第一动作 = 读本文件接管，不靠记忆、不靠前序对话。
 > 有 Edit/Write 的轮次，结束前必须先回写本文件（Stop hook 强制）。
 >
-> **当前任务：TASK-019-CICD出包（见文末，CODING 待本机验证）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
+> **当前任务：TASK-019-CICD出包（见文末，0026 轮绿，落点=Release+本地资产同步，待 push 验证）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
 
 ---
 
@@ -1076,7 +1076,7 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 
 ## Task ID: TASK-019-CICD自动出包（Windows）
 
-**Status: CODING（缓存毒根因已清 + 判成败改日志标记权威，待 push 重跑验证绿）**
+**Status: CODING（Release zip 链 + 本地资产同步步均已落码未跑，待一起 push 验证完整包）**
 
 ## 目标
 
@@ -1110,6 +1110,25 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
   根因（高置信推断）：run 39121615144 的 Unity 被强杀于导入/缓存写入中途（PowerShell 未等 GUI 那轮），clean:false 把截断的 Burst 缓存留了下来。
   处置（本轮落盘）：①已删 runner 工作区 Library/（删前确认无 Unity 进程挂该路径）②workflow 判成败改日志 SUCCESS 标记权威（防 Exit 崩溃把成功轮误报红；退出码只当失败信号）+ yml 头部加「被杀轮次后删 Library」维护注记｜已核验（python 锚点 count==1 + grep 落盘）。
   未验证：下一轮全绿 + artifact 上传（等 push 触发）；Exit(0) 是否也撞 0x40000015（标记权威已兜住）。
+- 2026-10-19｜push b353aa0 触发重跑 → 全链路绿，本地出包成功｜已核验（读 runner 本机 ci-build.log + 产物目录 + Worker 日志）：
+  20261019-0026 轮：Library 已清 → 全量重导 → 导表✓→Addressables✓→BuildPlayer✓，[CiBuild] SUCCESS 总耗时 113s，包 102MB（C:ctions-runner\_work\TapTap26\TapTap26\Build\StandaloneWindows6461019-0026\，exe = My project (1).exe）；Unity 退出干净（0x40000015 未复现，标记权威逻辑留作保险）；job 16:26-16:33 UTC 约 7.5 分钟。
+  **artifact 上传存疑，倾向没传上（高置信推断，非定论）**：Worker 日志实证 $GITHUB_ARTIFACTS file empty + 0 subject(s) + upload 步骤 ~2s 完成；v4 空文件默认 warn 不红；步骤自身日志已被 runner 回收（_diag/blocks 清空）无法定论，用户 Actions 页侧未见包（其原话「我这里是host啊，应该在本地出包」佐证）。ROI 取舍：不追该根因，转本地出包形态。
+  拍板：包以本机落盘为准（用户明示），GitHub artifact 非交付物；待 Ask 卡拍落点（固定目录复制 / +清旧 / 现状）后改 workflow，改动另行证据三段。
+- 2026-10-19｜落点落码（Ask 卡拍板=「固定目录，去掉 artifact」）｜已核验（python 锚点断言 count==1 + grep 落盘行号）：
+  yml 两处：①Upload build（upload-artifact@v4）整段删除 → 新步骤 Copy to local output（if: success()）：复制 runner 工作区 Build/StandaloneWindows64/<时间戳>/ → D:\TapTap26_Builds\<时间戳>\，自证=目标目录 *.exe 在位才 exit 0，否则 exit 1；②头部产物注释同步（本机固定目录交付，GitHub 不留包，磁盘手清）。
+  顺手：现存 0026 包已复制到 D:\TapTap26_Builds61019-0026\（exe 672KB 在位，全目录 104MB）——用户现在即可双击。
+  未验证：push 后新轮的复制步骤真跑通（等下次触发）；包可玩性（边界不变：git checkout 缺 Arts → 画面缺图；无 Wwise bank → 无声）。
+  待办：yml 改动待 push（用户自推或说一声我来推）；D:\TapTap26_Builds\ 累积清理由用户自理（每包 ~104MB）。
+- 2026-10-19｜落点二改（用户否掉固定目录方案，原话「不行，固定打完包上传到build文件夹吧（zip），本地的包删除不要占用空间」→ Ask 卡拍板 = GitHub Release）｜已核验（python 锚点 count==1 + grep 落盘 + rm 实证）：
+  yml：Copy to local output 步骤删除 → 三步链：Zip build（Compress-Archive → Build\TapTap26-Win64-<ts>.zip，自证 zip≥10MB）→ Upload release（softprops/action-gh-release@v2，tag build-<ts>，files=zip，body 注明缺美术/无声边界）→ Clean local build（if: success 才删 Build 目录与 zip；Release 失败本地保留兜底）。job 级加 permissions: contents: write（GITHUB_TOKEN 建 Release/推 tag 必需）。头部产物注释同步。
+  本地清理：D:\TapTap26_Builds\ 整目录删除（含 0026 副本）；runner 工作区 Build/StandaloneWindows64/20261019-0026 删除（唯一现存包随之消失，可重打；0026 的 GitHub artifact 上轮未传上，该版本现无处可取——用户拍板不要本地留存，接受）。
+  未验证：zip/Release/清删三步首次真跑（softprops 首次在此 runner 用）；私有仓库 GITHUB_TOKEN 写权限实际放行（若 403 → repo Settings→Actions→Workflow permissions 改 read/write）。
+  待办：push 触发验证；验收 = Release 页出现 build-<时间戳> 带 zip（≥90MB）+ runner 工作区 Build 目录清空 + 本机磁盘无包残留。
+- 2026-10-19｜本地资产同步进构建（用户「push Dev_Pao → 自动构建，资产都在本地啊」= CI 要用上本机资产）｜已核验（cat .gitignore + du 两端目录实证）：
+  同步范围 = .gitignore 明确忽略的两处资产：Assets/Arts/（13MB 美术）+ Assets/StreamingAssets/Audio/GeneratedSoundBanks/（24MB Wwise bank）；/StreamingAssets/aa/* 与 AddressablesData *.bin 为构建自产物，不同步。
+  yml 新步骤 Sync local assets（Checkout 后 Build 前）：robocopy /MIR 从 D:\Github hierarchy\TapCom26\My project (1)\Assets 镜像两目录进 runner 工作区（路径绑本机，换机需改）；.meta 随资产复制（GUID 对齐场景/预制体引用——inference，Unity 常识级：引用锚在 meta 的 GUID）；robocopy 0-7=成功、≥8 exit 1；源目录缺失 exit 1 不静默；本步失败则后续步骤默认跳过，不出缺资产行包。
+  未验证：下轮 Release 包体积上涨（预期 +35MB 原始规模）+ 解压实跑画面/声音完整（Arts 进场景引用是 inference，bundle/直接引用构成未查）；bank 进包后运行时加载路径不变（前轮 WwiseSettings 已关拷贝闸，资产已就位时无影响）。
+  待办：与 Release 链一起 push（一次验证两改动）；验收 = Release zip 明显变大 + 用户解压实跑看图听声。
 - 2026-10-18｜音频 meta 直修生效 + 打包失败新断点根因｜已核验（用户贴 Console 日志 + 读源码 + cat WwiseSettings.xml）：
   ① meta 直修（用户「你能帮我做吗」授权）：x86_64 Release 引擎 Editor=1/Win64=1(CPU x86_64)、Profile Editor=0/Win64=0。**日志证据：same-name 冲突报错消失 + "Sound engine initialized successfully"**（引擎自证，Plugin DLL path 指向 x86_64\DSP）。
   ② 新断点=Build And Run 失败（Build Failed, 2 errors）：AkBuildPreprocessor.cs:147 闸 `CopySoundBanksAsPreBuildStep=true`（Assets/WwiseSettings.xml:3 实证）→ CopySoundbanks(:119)→GetSoundBankPaths 找「Wwise 工程」bank 源目录；`<WwiseProjectPath />` 为空 + 全仓库 glob *.wproj 0 命中 → "Could not find source folder for <Windows>"。bank 本就直接躺在 Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/（前轮对账），拷贝步骤在本项目**恒失败**（无工程可拷）。
