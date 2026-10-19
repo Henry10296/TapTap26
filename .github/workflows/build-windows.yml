@@ -15,6 +15,8 @@
 # 注意：checkout 设 clean:false 保留 Library 缓存，首次构建最慢，之后为增量。
 # 维护：某轮被取消/强杀后（runner 上 Unity 进程被结束），增量缓存可能截断，下一轮报
 # Burst "failed running" / EndOfStreamException——删 runner 工作区下的 Library 重跑即可。
+# 注意：run: 脚本体一律纯 ASCII——windows-powershell 按系统 ANSI 读无 BOM 临时 ps1，
+#       中文会乱码并炸解析（run 39216643046 实证）。中文说明只写在头部 # 注释区。
 # Unity 版本升级（ProjectVersion.txt 变更）时，改下方 UNITY_EXE 路径里的版本号。
 
 name: build-windows
@@ -43,9 +45,10 @@ jobs:
       - name: Sync local assets
         shell: powershell
         run: |
-          # 资产不入库（.gitignore 排除 Arts 与 Wwise bank），构建前从本机项目目录镜像进
-          # runner 工作区；.meta 随资产一起复制（GUID 对齐，场景/预制体引用才认）。
-          # 路径绑定本机（self-hosted runner = 本机），换机器需改。
+          # Assets are not in git (.gitignore excludes Arts and Wwise banks); mirror them
+          # from the local project before building. .meta files are copied along (GUIDs
+          # must match scene/prefab references). Path is bound to this machine; update
+          # it if the project moves to another PC.
           $srcRoot = 'D:\Github hierarchy\TapCom26\My project (1)\Assets'
           $pairs = @(
             @('Arts', 'Arts'),
@@ -53,9 +56,9 @@ jobs:
           )
           foreach ($p in $pairs) {
             $src = Join-Path $srcRoot $p[0]
-            if (-not (Test-Path $src)) { Write-Host "ERROR: 本地资产源不存在: $src"; exit 1 }
+            if (-not (Test-Path $src)) { Write-Host "ERROR: local asset source not found: $src"; exit 1 }
             robocopy $src (Join-Path 'Assets' $p[1]) /MIR /NJH /NJS /NDL /NFL /NP | Out-Null
-            if ($LASTEXITCODE -ge 8) { Write-Host "ERROR: robocopy $($p[0]) 失败 code=$LASTEXITCODE"; exit 1 }
+            if ($LASTEXITCODE -ge 8) { Write-Host "ERROR: robocopy $($p[0]) failed code=$LASTEXITCODE"; exit 1 }
             Write-Host "synced: $($p[0])"
           }
           exit 0
@@ -80,20 +83,21 @@ jobs:
             '-buildTimestamp', $ts,
             "-logFile", "`"$log`""
           )
-          # PowerShell 不等 GUI 程序：必须 Start-Process -Wait 才能拿到真实退出码
+          # PowerShell does not wait for GUI processes: Start-Process -Wait is required for the real exit code
           $p = Start-Process -FilePath $env:UNITY_EXE -ArgumentList $unityArgs -Wait -PassThru
           $code = $p.ExitCode
           Write-Host "Unity exit code: $code"
           if (-not (Test-Path $log)) {
-            Write-Host "ERROR: Unity 没有写日志文件（进程未真正运行）"
+            Write-Host "ERROR: Unity did not write a log file (process did not really run)"
             exit 1
           }
           Get-Content $log -Tail 80
-          # 判成败以日志 SUCCESS 标记为准（被测系统自证）：Unity 在 EditorApplication.Exit 的
-          # 域卸载阶段偶发崩溃（退出码 1073741845），但那时产物已完整落盘；退出码只当失败信号用。
+          # Success is decided by the [CiBuild] SUCCESS log marker (self-evidence):
+          # Unity sometimes crashes in EditorApplication.Exit domain unload (exit code 1073741845)
+          # after the output is already complete; the exit code is only used as a failure signal.
           if (Select-String -Path $log -Pattern '\[CiBuild\] SUCCESS' -Quiet) { exit 0 }
           if ($code -eq 0) {
-            Write-Host "ERROR: 退出码 0 但日志无 [CiBuild] SUCCESS（假绿防护）"
+            Write-Host "ERROR: exit code 0 but no [CiBuild] SUCCESS marker in log"
             exit 1
           }
           exit $code
@@ -105,10 +109,10 @@ jobs:
           $ts = '${{ steps.build.outputs.timestamp }}'
           $zip = "Build\TapTap26-Win64-$ts.zip"
           Compress-Archive -Path "Build\StandaloneWindows64\*" -DestinationPath $zip -Force
-          # 自证：zip 在且体积合理（当前包 ~104MB；阈值 10MB 防空包）
+          # self-check: zip exists and size is sane (current build ~104MB; 10MB floor guards empty zips)
           $item = Get-Item $zip
-          if ($item.Length -lt 10MB) { Write-Host "ERROR: zip 过小，疑似空包"; exit 1 }
-          Write-Host "zip 完成: $zip $([math]::Round($item.Length/1MB)) MB"
+          if ($item.Length -lt 10MB) { Write-Host "ERROR: zip too small, likely empty"; exit 1 }
+          Write-Host "zip done: $zip $([math]::Round($item.Length/1MB)) MB"
 
       - name: Upload release
         if: success()
@@ -125,4 +129,4 @@ jobs:
         run: |
           Remove-Item -Recurse -Force "Build\StandaloneWindows64" -ErrorAction SilentlyContinue
           Remove-Item -Force "Build\TapTap26-Win64-*.zip" -ErrorAction SilentlyContinue
-          Write-Host "本地构建产物已清（包在 Release 页）"
+          Write-Host "local build output cleaned (package is on the Release page)"

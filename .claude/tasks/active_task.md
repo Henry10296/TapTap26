@@ -3,7 +3,7 @@
 > 跨会话状态锚点。换会话第一动作 = 读本文件接管，不靠记忆、不靠前序对话。
 > 有 Edit/Write 的轮次，结束前必须先回写本文件（Stop hook 强制）。
 >
-> **当前任务：TASK-019-CICD出包（见文末，0026 轮绿，落点=Release+本地资产同步，待 push 验证）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
+> **当前任务：TASK-019-CICD出包（见文末，0026 轮绿，落点=Release+资产同步，编码坑已修，待 push 验证）；TASK-018-种子HUD（CODING 待编译验收）；TASK-017-限时计时器 CODING 待验收**。TASK-001~016 已完结/前序待验收，留作归档记录。
 
 ---
 
@@ -1076,7 +1076,7 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 
 ## Task ID: TASK-019-CICD自动出包（Windows）
 
-**Status: CODING（Release zip 链 + 本地资产同步步均已落码未跑，待一起 push 验证完整包）**
+**Status: CODING（Release 链 + 资产同步 + run 体 ASCII 化均已落码，待 push 三合一验证）**
 
 ## 目标
 
@@ -1129,6 +1129,11 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
   yml 新步骤 Sync local assets（Checkout 后 Build 前）：robocopy /MIR 从 D:\Github hierarchy\TapCom26\My project (1)\Assets 镜像两目录进 runner 工作区（路径绑本机，换机需改）；.meta 随资产复制（GUID 对齐场景/预制体引用——inference，Unity 常识级：引用锚在 meta 的 GUID）；robocopy 0-7=成功、≥8 exit 1；源目录缺失 exit 1 不静默；本步失败则后续步骤默认跳过，不出缺资产行包。
   未验证：下轮 Release 包体积上涨（预期 +35MB 原始规模）+ 解压实跑画面/声音完整（Arts 进场景引用是 inference，bundle/直接引用构成未查）；bank 进包后运行时加载路径不变（前轮 WwiseSettings 已关拷贝闸，资产已就位时无影响）。
   待办：与 Release 链一起 push（一次验证两改动）；验收 = Release zip 明显变大 + 用户解压实跑看图听声。
+- 2026-10-19｜run 39216643046 红 = 编码炸解析，已修（用户贴 run 页报错）｜已核验（报错原文 mojibake 实证 + Edit 落盘 grep/ASCII 扫描双自检）：
+  根因 = runner 把 run: 脚本体写成 UTF-8 无 BOM 临时 ps1，windows-powershell 按系统 ANSI（此机 Windows-1252，报错里中文全成「æœ¬åœ°」类 mojibake 实证）误读 → Sync local assets 步解析炸（TerminatorExpectedAtEndOfString，后续 } 全失配）→ exit 1，后续步骤按设计全跳过。0026 轮 Build 步带中文未炸属侥幸（mojibake 恰好引号仍成对），同风险一直潜伏。具体哪个字节序列失配引号未逐字节钉死（inference）；ASCII 化为充分修复（ASCII 在任何 codepage 同字节）。
+  修复 = 4 个 run: 脚本体全 ASCII 化（12 处替换 count==1 断言：注释+报错串英文化）；中文留头部 # 注释区（不进 ps1）+ 头部新增教训注记；Release body（YAML 字段非 ps1）保留中文。自检 = 扫描确认 run: 块内 0 非 ASCII。
+  未验证：下一轮 Sync 步真跑绿 + Release 链首发 + 资产同步后包体积上涨。
+  待办：push（Release 链 + 资产同步 + ASCII 化三合一验证）。
 - 2026-10-18｜音频 meta 直修生效 + 打包失败新断点根因｜已核验（用户贴 Console 日志 + 读源码 + cat WwiseSettings.xml）：
   ① meta 直修（用户「你能帮我做吗」授权）：x86_64 Release 引擎 Editor=1/Win64=1(CPU x86_64)、Profile Editor=0/Win64=0。**日志证据：same-name 冲突报错消失 + "Sound engine initialized successfully"**（引擎自证，Plugin DLL path 指向 x86_64\DSP）。
   ② 新断点=Build And Run 失败（Build Failed, 2 errors）：AkBuildPreprocessor.cs:147 闸 `CopySoundBanksAsPreBuildStep=true`（Assets/WwiseSettings.xml:3 实证）→ CopySoundbanks(:119)→GetSoundBankPaths 找「Wwise 工程」bank 源目录；`<WwiseProjectPath />` 为空 + 全仓库 glob *.wproj 0 命中 → "Could not find source folder for <Windows>"。bank 本就直接躺在 Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/（前轮对账），拷贝步骤在本项目**恒失败**（无工程可拷）。
