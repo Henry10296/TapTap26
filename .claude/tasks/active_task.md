@@ -1203,3 +1203,28 @@ A=Script/Presentation/UI/** 新建 + GameBootstrap.cs；B=Script/Gameplay/Player
 - 2026-10-19 反馈「通关 BGM 泄露」（=15.36s 淡出根因第二次显形；代码 10-18 起结算就发 Stop_BGM，bank 淡出让停止无效）→ AudioBackend.cs 加硬停兜底（1 文件，未编译）：+MusicPlayEvent/MusicStopEvent 私有常量 + _musicPlayingId 字段（Play_BGM 成功后记录实例）；Play() 内发 Stop_BGM 时先 StopPlayingID(id,0) 硬停再照发事件。效果：通关/失败/重开/败重试（凡发 Stop_BGM 处）音乐立即停；重开不从头一并代码侧修复。Wwise 侧改小淡出后兜底自动成无操作（日志行消失=bank 已修）。用户附注「一关只有一个bgm」→ music1/music2 同素材属预期，同字节疑点关闭，无需处理。
 - 2026-10-19 新需求「1-3 关 music1 单层、第四关 music1+music2 叠层」→ 按关设 Status 开关（2 文件，未编译）：①LevelManager.cs：LevelLoadedEvent +LevelIndex 字段/ctor 参数（_index 随事件走；全库唯一构造点 :104 已同步，9 消费方均属性读取不受影响——grep 实证）②AudioManager.cs：+using TapCom.Gameplay；AudioCatalog +SwitchTense="Badly_status" +TenseLevelIndex=3（第四关 0 基 index3，加关改这里）；+ _levelIndex 字段 + 订阅 LevelLoadedEvent（Load 先于 Cg→Playing，进场时已就绪）；OnStateChanged 进 Playing 按关设开关（index==3→Badly_status 否则 status_Switch），回 TitleScreen 强制 status_Switch（防第四关退出残留紧张）。
 - **明示假设（用户已告知）**：开关值↔音乐层的对应（status_Switch=music1 单层 / Badly_status=music1+music2 叠层）是 Wwise music 决策侧的接线，wproj 在 Y 盘本机不可见无法核验；若 Wwise 实际接法不同（值对调/未接），改 Wwise 或对调 AudioCatalog 两常量。验收：进第四关 Console 见 switch Status = Badly_status，1-3 关见 status_Switch，回标题见 status_Switch；音乐层听感依赖 Wwise 侧接线正确。
+
+### 2026-10-19 WwiseGlobal 双份确认 + BGM 泄露日志时间线（已核验）
+- 已核验（读源码）：每个场景一份 WwiseGlobal = 编辑器自动补建（AkWwisePostImportCallbackSetup.cs:315 CheckWwiseGlobalExistance，场景无 AkInitializer 即新建）；官方说明：编辑器工作流每场景一个供预览，运行时仅首个场景实例存活并常驻（AkWwiseEditorSettings.cs:251）。运行时"第二个" = AkInitializer.Awake 的 DontDestroyOnLoad(this)（AkInitializer.cs:107）；重复自毁守卫 AkInitializer.cs:87 `if (ms_Instance) DestroyImmediate(this)`；二次初始化守卫 AkSoundEngineController.cs:142-165 IsInitialized。Game.unity 那份整体禁用 m_IsActive:0（Game.unity:1487）。结论：双份正常，非泄露原因，不用处理。
+- 已核验（Editor.log 时间线）：早期会话（~88444-151249 行）通关只有 play Stop_BGM、无 hard-stop fallback = 硬停兜底加入前的旧程序集，15.36s 淡出泄露真实发生；152680 行 bank reload 起的新会话：通关（Play_Level_Complete 后）/失败/R 重开全部触发 fallback = 新程序集 Stop 链路实测生效；重开序列完整 fallback→Stop_BGM→Stop_Ambient_Ruin→Play_Level_Reset→switch Status=status_Switch→Play_BGM（新 playingId）。
+- open-question：日志全程无 switch Status = Badly_status —— 第四关未测（路径未验证）或 LevelIndex 链路断，待用户确认进没进过第四关。
+- inference：用户"还泄露"体感可能来自重编译前旧程序集的轮次；待新一轮复测日志比对确认。
+
+### 2026-10-19 泄露实锤 + 证据修正（用户贴 Console 全文后）
+- **修正上条结论**：「新程序集 Stop 链路实测生效」降级——fallback 行出现只证"调了 StopPlayingID"，不证"音乐真停了"（违反 §1.3 被测系统自证，收回）。
+- **用户贴的 Console 粘贴丢行实锤**：第二次失败的 `[Core] GameState: Playing -> Defeat` 与 `Defeat -> Loading` 两行缺失（GameManager.cs:86 无条件必打、紧贴 :87 publish；publish 下游 [Audio] 行全部在场且 playingId 连续 739→794 无跳号）→ 粘贴不完整 → 「第二次失败无 fallback」证据作废。
+- **站得住的结论**：按 playingId 硬停路径整体不可信。两种失败模式都可能：a) track 丢失（inference）b) StopPlayingID 对 Interactive Music 停不住（inference，若第一次失败重试后也听到叠音则实锤）。
+- **泄露链条**（已核验）：失败 → 用户点重试 → Play_BGM(784) 起播时旧实例仍被 15.36s 淡出覆盖 → 叠音 = 用户听到的泄露。
+- **修法候选（等拍板）**：AudioBackend.cs:65-70 Stop_BGM 分支加 AkSoundEngine.ExecuteActionOnEvent("Play_BGM", AkActionOnEventType_Stop=0, emitter, 0, AkCurveInterpolation_Linear=4)——按事件停所有实例，不依赖 track。API 已验证：字符串重载 AkUnitySoundEngine.cs:513、枚举值 Generated/Common 两文件。Wwise 侧根修不变：Stop_BGM fade→0~0.1s。
+- open-question：本轮日志全程第 1 关两连败，第四关/Badly_status 仍未测到；粘贴丢行机制未明（下次取证改用 Editor.log + 新增专属日志行）。
+
+### 2026-10-19 三重停已实施（用户拍板「三重停（推荐）」）
+- 已改 AudioBackend.cs：Play() 的 MusicStopEvent 分支 → ① track 在按 playingId 0ms 停（日志 "playingId hit"）② ExecuteActionOnEvent("Play_BGM", Stop, emitter, 0, Linear) 按事件停所有实例（日志 "ExecuteActionOnEvent → AKRESULT"）③ 照发 Stop_BGM；EnsureEmitter 提前到分支前（ExecuteActionOnEvent 需要 emitter）。类头注释同步更新。旧 "hard-stop fallback" 字符串已无残留，Play() 方法完整性已核对（sed 53-105）。
+- 编译状态：未编译（AI 侧无 Unity 编译环境），待用户 Editor 编译验证。
+- 待办（用户复测）：胜利/失败/重开各一次 + 进一次第四关；认新日志行 "Stop_BGM hard-stop: ExecuteActionOnEvent → AK_Success"；耳听泄露是否消失；第四关看 "switch Status = Badly_status" 是否出现。
+- 取证方式修正：不再依赖 Console 复制粘贴（已实证丢行），直接读 Editor.log。
+
+### 2026-10-19 暂停恢复叠音乐已修（用户拍板「恢复不重发」）
+- 已核验（Editor.log 300547-300856）：三次 Esc 循环，每次 Paused→Playing 都重发 Play_BGM(939/942/…) + Play_Ambient_Ruin(940/943/…)，中间无 Stop = 叠层现场实锤。第一按钮 = PausePanel.ResumeGame → TrySetState(Playing)（PausePanel.cs 源码）。
+- 已改 AudioManager.cs：For 与 ForAmbient 的 Playing 入口加 `evt.From == GameState.Paused ? null : ...`（原 :124/:134）。暂停恢复继续响原音乐；Cg→Playing 进关照发；switch 重发保留（幂等无害）。
+- 待办不变：Wwise 侧 Stop_BGM fade 15.36s→0~0.1s（唯一泄露正路，音频同事）；第四关 Badly_status 从未测到。复测：编译后暂停/恢复一轮听叠音。

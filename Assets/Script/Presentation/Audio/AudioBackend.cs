@@ -25,9 +25,11 @@ namespace TapCom.Presentation
     {
         private const string BankName = "Main";
 
-        // —— BGM 硬停兜底（2026-10-19 用户反馈「通关 BGM 泄露」）：bank 的 Stop_BGM 停止动作带 15.36s 淡出
-        // （Main.json Event Duration 实证，其余 Stop 全 0），淡出期间 music 仍活跃 → 结算泄露、重开二次 Play 不从头。
-        // 代码侧记录 music 实例按 playingId 0ms 硬停；事件照发，Wwise 侧改小淡出后本兜底自动成无操作。——
+        // —— BGM 硬停三重保险（2026-10-19 用户反馈「绝对泄露」+ 拍板）：bank 的 Stop_BGM 停止动作带 15.36s 淡出
+        // （Main.json DurationMin/Max 实证），淡出期间 music 仍活跃 → 结算泄露、重开叠音。
+        // 单靠 playingId 跟踪不可信（track 可能丢失、StopPlayingID 对 Interactive Music 存疑）：
+        // ① track 在 → playingId 0ms 停；② ExecuteActionOnEvent 按 Play_BGM 事件 0ms 停所有实例；
+        // ③ 照发 Stop_BGM，Wwise 侧把淡出改小后自动成为正路。——
         private const string MusicPlayEvent = "Play_BGM";
 
         private const string MusicStopEvent = "Stop_BGM";
@@ -62,14 +64,24 @@ namespace TapCom.Presentation
                 return false;
             }
 
-            if (eventId == MusicStopEvent && _musicPlayingId != AkSoundEngine.AK_INVALID_PLAYING_ID)
+            EnsureEmitter();
+
+            if (eventId == MusicStopEvent)
             {
-                AkSoundEngine.StopPlayingID(_musicPlayingId, 0);
-                _musicPlayingId = AkSoundEngine.AK_INVALID_PLAYING_ID;
-                Debug.Log("[Audio] Stop_BGM hard-stop fallback (bank fade 15.36s workaround)");
+                // 三重保险（见类头注释）：track 在先按 playingId 停，再按 Play_BGM 事件停所有实例，最后照发 Stop_BGM 事件。
+                if (_musicPlayingId != AkSoundEngine.AK_INVALID_PLAYING_ID)
+                {
+                    AkSoundEngine.StopPlayingID(_musicPlayingId, 0);
+                    _musicPlayingId = AkSoundEngine.AK_INVALID_PLAYING_ID;
+                    Debug.Log("[Audio] Stop_BGM hard-stop: playingId hit");
+                }
+
+                var stopResult = AkSoundEngine.ExecuteActionOnEvent(
+                    MusicPlayEvent, AkActionOnEventType.AkActionOnEventType_Stop, _emitter, 0,
+                    AkCurveInterpolation.AkCurveInterpolation_Linear);
+                Debug.Log($"[Audio] Stop_BGM hard-stop: ExecuteActionOnEvent → {stopResult}");
             }
 
-            EnsureEmitter();
             var playingId = AkSoundEngine.PostEvent(eventId, _emitter);
             if (playingId == AkSoundEngine.AK_INVALID_PLAYING_ID)
             {

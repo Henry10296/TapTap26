@@ -121,7 +121,7 @@ namespace TapCom.Presentation
 
         public static string For(in GameStateChangedEvent evt) => evt.To switch
         {
-            GameState.Playing => MusicPlay,
+            GameState.Playing => evt.From == GameState.Paused ? null : MusicPlay, // 暂停恢复不重发（2026-10-19 用户反馈：恢复叠音乐；Paused 态音乐未停，重发即叠层）；进关（Cg→Playing）照发
             GameState.TitleScreen => MusicPlay, // 2026-10-19 用户拍板「标题起播、进关重起」：标题也起 BGM；TitleScreen→Loading 仍 Stop → 进关从头（原为静音）
             GameState.Loading => MusicStop, // reset/换关全过 Loading（LevelManager.Reload/Advance），停旧曲让 Playing 从头播（2026-10-18 用户需求：BGM 跟着重开）
             GameState.Victory or GameState.Defeat => MusicStop, // 结算即停（2026-10-18 拍板按设计表「通关/死亡时停止」）
@@ -131,7 +131,7 @@ namespace TapCom.Presentation
         /// <summary>环境底噪（设计表：遗迹滴水+嗡鸣低音量持续）：跟 BGM 同状态机，结算即停（2026-10-18 拍板）。</summary>
         public static string ForAmbient(in GameStateChangedEvent evt) => evt.To switch
         {
-            GameState.Playing => AmbientPlay,
+            GameState.Playing => evt.From == GameState.Paused ? null : AmbientPlay, // 同 BGM：暂停恢复不重发（2026-10-19 用户反馈叠音乐）
             GameState.TitleScreen or GameState.Loading or GameState.Victory or GameState.Defeat => AmbientStop,
             _ => null,
         };
