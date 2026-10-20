@@ -1499,7 +1499,7 @@ MonoBehaviour:
   _blueSprite: {fileID: 21300000, guid: 2365aab117b4c684b8a43075e4503eae, type: 3}
   _redSprite: {fileID: 21300000, guid: 82556a4099908e641b0bb82fa4962506, type: 3}
   _yellowSprite: {fileID: 21300000, guid: 056ef61d8c77e8e4db9c482ef80d50ef, type: 3}
-  _flashColor: {r: 1, g: 0.85, b: 0.3, a: 1}
+  _flashColor: {r: 0, g: 0, b: 0, a: 1}
   _flashPeriod: 0.4
 --- !u!1 &1112388086
 GameObject:
