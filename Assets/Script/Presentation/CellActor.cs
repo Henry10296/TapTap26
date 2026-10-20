@@ -13,12 +13,14 @@ namespace TapCom.Presentation
     public class CellActor : MonoBehaviour
     {
         [SerializeField] private Sprite _rockSprite;
+        [SerializeField] private Sprite _rock02Sprite;
         [SerializeField] private Sprite _blueSprite;
         [SerializeField] private Sprite _redSprite;
         [SerializeField] private Sprite _yellowSprite;
 
         /// <summary>基岩地形格贴图（TASK-016）：按 Type 选图；缺槽一次性告警与各色槽同风格。</summary>
         [SerializeField] private Sprite _bedrockSprite;
+        [SerializeField] private Sprite _bedrock02Sprite;
 
         private SpriteRenderer _renderer;
         private bool _missingWarned;
